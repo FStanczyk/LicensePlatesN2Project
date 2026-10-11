@@ -1,0 +1,12 @@
+# Obrazy trzymamy poza gitem; pobiera je scripts/download_data.py
+data/**/photos/
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.png
+data/_downloads/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
