@@ -1,0 +1,7 @@
+# Na Kaggle ustaw path na katalog zbioru, np. /kaggle/input/eu-license-plates-alpr/detection
+path: .
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: plate

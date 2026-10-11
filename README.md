@@ -82,25 +82,85 @@
 
 ## Dane
 
-Zdjęcia nie są trzymane w gicie. Żeby je pobrać:
+Gotowy, znormalizowany zbiór jest na Kaggle jako prywatny dataset
+[`filipstanczyk/eu-license-plates-alpr`](https://www.kaggle.com/datasets/filipstanczyk/eu-license-plates-alpr)
+(dostęp nadaje Stańczyk). Pobierasz go raz do `data/combined/`:
 
 ```bash
-python3 scripts/download_data.py
+pip install -r requirements.txt
+python3 scripts/get_data.py
 ```
 
-Skrypt pobiera archiwum z Kaggle (bez logowania), rozpakowuje do `data/<zbiór>/photos/`
-i sprawdza sumy SHA-256 z `data/<zbiór>/SHA256SUMS`. Jeśli archiwum masz już lokalnie:
+Potrzebny jest token API Kaggle: kaggle.com -> Settings -> API -> Create New Token, plik zapisz
+w `~/.kaggle/`. Skrypt pobiera ok. 4.5 GB, rozpakowuje i sprawdza, czy są wszystkie pliki z
+`plates.csv`. Przy kolejnym uruchomieniu nic nie pobiera; po nowej wersji na Kaggle użyj `--force`.
+
+Na Kaggle (notebook) wystarczy dodać dataset przez "Add Input"; pliki są w
+`/kaggle/input/eu-license-plates-alpr/`. Uwaga: tam wycinki leżą o poziom głębiej, w `ocr/ocr/<split>/`,
+więc ścieżka do wycinka to `"/kaggle/input/eu-license-plates-alpr/ocr/" + crop`
+(`get_data.py` lokalnie to wyrównuje, więc lokalnie wystarczy `"data/combined/" + crop`).
+
+### Zawartość
+
+| Ścieżka | Co to jest |
+|---|---|
+| `plates.csv` | jedna linia na tablicę, opis kolumn niżej |
+| `detection/images/<split>/`, `detection/labels/<split>/`, `detection/data.yaml` | całe zdjęcia + etykiety YOLO (klasa 0 = tablica), do detekcji |
+| `ocr/<split>/` | wycięte tablice ze wszystkich źródeł, do OCR |
+
+8292 tablic, każda w dwóch wersjach (oryginał + kopia z losowym sztucznym zniekształceniem),
+razem 16584 wierszy. Z tego 1074 zdjęć (1292 tablic) to całe zdjęcia, reszta to same wycinki.
+
+| Źródło | Tablice | Typ | Uwagi |
+|---|---|---|---|
+| [Poland Vehicle License Plate Dataset](https://www.kaggle.com/datasets/piotrstefaskiue/poland-vehicle-license-plate-dataset) | 290 (PL) | całe zdjęcia | brak podziału, losujemy 70/15/15 |
+| [UC3M-LP](https://github.com/ramajoballester/uc3m-lp) | 1002 (ES), 784 zdjęć | całe zdjęcia | wszystkie nocne (362) + losowe dzienne; **każda** tablica ma zamazane znaki (`*`), więc nadaje się do detekcji i testów nocnych, ale nie do metryk OCR |
+| [AUTO.RIA Numberplate OCR EU](https://github.com/ria-com/nomeroff-net) | 7000 (1710 PL + po ok. 204 z 26 krajów UE) | same wycinki | CC BY 4.0 |
+
+### Kolumny `plates.csv`
+
+| Kolumna | Opis |
+|---|---|
+| `plate_id` | identyfikator wiersza; prefiks `data1_` / `data2_` / `data3_` mówi, z którego źródła |
+| `sample_type` | `full_photo` (całe zdjęcie, do detekcji) albo `plate_crop` (tylko wycinek, do OCR) |
+| `split` | `train` / `val` / `test`; zniekształcona kopia jest zawsze w tym samym podziale co oryginał |
+| `text` | numer tablicy, tylko A-Z i 0-9; `*` = znak zamazany |
+| `text_raw` | numer w oryginalnym zapisie źródła |
+| `blurred` | 1 = tablica ma zamazane znaki, pomijamy przy metrykach OCR |
+| `country` | kod kraju (`pl`, `es`, `de`, ...) |
+| `lighting` | pora zdjęcia według źródła: `day` / `night` / `unknown` (znana tylko dla UC3M-LP) |
+| `exposure` | naświetlenie tablicy zmierzone na wycinku: `under` / `normal` / `over` |
+| `lines` | liczba wierszy znaków na tablicy (1 lub 2) |
+| `artificial_corruption` | `none` albo dodane przez nas zniekształcenie: `brightness`, `darken`, `contrast`, `fog`, `gaussian_noise`, `shot_noise`, `motion_blur`, `defocus_blur`, `jpeg_compression` |
+| `artificial_severity` | 0 dla oryginału, 1-5 dla kopii |
+| `image` | ścieżka do całego zdjęcia (puste dla `plate_crop`) |
+| `x1`, `y1`, `x2`, `y2`, `polygon` | ramka i 4 narożniki tablicy na zdjęciu (puste dla `plate_crop`) |
+| `crop` | ścieżka do wyciętej tablicy |
+
+Przykłady:
+
+```python
+import pandas as pd
+df = pd.read_csv("data/combined/plates.csv")
+detekcja = df[df.sample_type == "full_photo"]
+ocr_test = df[(df.split == "test") & (df.blurred == 0)]
+noc = df[df.lighting == "night"]
+niedoswietlone = df[df.exposure == "under"]
+```
+
+### Jak zbiór został zbudowany
+
+Do codziennej pracy niepotrzebne (wystarczy `get_data.py`). Tylko do odtworzenia albo zmiany zbioru:
 
 ```bash
-python3 scripts/download_data.py data1 --zip ~/Downloads/archive.zip
+pip install imagecorruptions==1.1.2 opencv-python
+python3 scripts/download_data.py    # pobiera źródła do data/data1..3 (ok. 6 GB, w tym archiwum 4.5 GB)
+python3 scripts/build_dataset.py    # składa data/combined/
+kaggle datasets version -p data/combined -m "opis zmian" -r zip   # nowa wersja na Kaggle
 ```
 
-| Zbiór | Źródło | Zawartość |
-|---|---|---|
-| `data1` | [Poland Vehicle License Plate Dataset](https://www.kaggle.com/datasets/piotrstefaskiue/poland-vehicle-license-plate-dataset) | 290 zdjęć, adnotacje CVAT (`annotations.xml`: bbox + numer tablicy) |
-
-W gicie zostają tylko małe pliki: adnotacje i sumy kontrolne.
-
-Nowy zbiór dodajesz tak:
-1. Dopisz wpis do `DATASETS` w `scripts/download_data.py`.
-2. Wygeneruj sumy: `cd data/<zbiór>/photos && sha256sum * > ../SHA256SUMS`.
+* `download_data.py` z archiwów UC3M-LP i AUTO.RIA bierze tylko wybrane pliki. Wybór jest zapisany
+  w `data/<zbiór>/labels.csv` (w gicie), więc za każdym razem wychodzi to samo. Sumy kontrolne
+  w `data/<zbiór>/SHA256SUMS`. Pobieranie można przerwać i wznowić (`--force`).
+* `build_dataset.py` normalizuje etykiety, zmniejsza zdjęcia (dłuższy bok 1920 px), wycina i prostuje
+  tablice, dodaje zniekształcenia i liczy `exposure`. Szczegóły decyzji: `process_documentation/filip.md`.
