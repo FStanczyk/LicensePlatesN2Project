@@ -56,6 +56,30 @@
 
 ---
 
+## Przegląd literatury
+
+**1. "An Improvement of License Plate Detection Under Low Light Condition Using CLAHE and Unsharp Masking" (2025)**
+* Cel: sprawdzenie, jak wstępne przetwarzanie obrazu wpływa na skuteczność YOLOv11 na nocnych zdjęciach z kamer miejskich.
+* Metoda: 4 warianty: samo YOLOv11 (baseline), YOLOv11 + CLAHE, YOLOv11 + Unsharp Masking (USM), YOLOv11 + CLAHE + USM. CLAHE nakładano osobno na każdy kanał R, G, B, żeby nie wzmacniać szumu.
+* Wyniki: najlepiej wypadło połączenie CLAHE (lokalny kontrast) i USM (wyostrzenie krawędzi): Precision 0.945, Recall 0.977, mAP 0.830. Sam model nie wystarcza na ciemnych zdjęciach, preprocessing wyraźnie pomaga.
+
+**2. "Towards End-to-End License Plate Detection and Recognition: A Large Dataset and Baseline" (Z. Xu i in., ECCV 2018)**
+* Cel: udostępnienie dużego zbioru CCPD (ponad 250 tys. zdjęć) i model, który nie wymaga dzielenia tablicy na pojedyncze znaki.
+* Metoda: zamiast klasycznego potoku (detekcja -> cięcie na litery -> odczyt liter) jeden model end-to-end łączący CNN (cechy obrazu) z RNN (odczyt sekwencji).
+* Wyniki: na trudnych podzbiorach (CCPD-Weather, CCPD-Challenge) skuteczność systemów spada. OCR czytający całą tablicę naraz (segmentation-free) jest dużo bardziej odporny na cienie i niedoświetlenie niż podejście z segmentacją znaków.
+
+**3. "Design of a Rapid License Plate Localization Algorithm Utilizing Adaptive Image Enhancement" (2024/2026)**
+* Cel: system, który radzi sobie ze złym oświetleniem w czasie rzeczywistym, przy wysokim FPS.
+* Metoda: zamiast poprawiać obraz w RGB, konwersja do przestrzeni LAB i CLAHE tylko na kanale L (jasność), potem złożenie obrazu z powrotem.
+* Wyniki: dobrze działa na zdjęciach niedoświetlonych i robionych pod słońce. Poprawia precyzję lokalizacji tablic i mocno skraca czas przetwarzania jednej klatki.
+
+**Wnioski dla naszego projektu**
+1. Zamiast globalnego wyrównania histogramu (HE) używamy CLAHE. Warto porównać dwa warianty: CLAHE na kanałach RGB oraz CLAHE tylko na kanale jasności (V w HSV albo L w LAB).
+2. Samo rozjaśnienie nie wystarczy, liczą się też ostre krawędzie znaków. Unsharp Masking po CLAHE powinien ograniczyć mylenie znaków przez OCR na nocnych zdjęciach (B/8, O/0). Zadanie dla Stańczyka i Golby.
+3. Do OCR lepiej wybrać modele czytające cały ciąg znaków (EasyOCR, LPRNet, CRNN), żeby uniknąć błędów cięcia pojedynczych liter przy mocnych odblaskach.
+
+---
+
 ## Dane
 
 Zdjęcia nie są trzymane w gicie. Żeby je pobrać:
