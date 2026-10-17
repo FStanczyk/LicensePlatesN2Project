@@ -162,3 +162,62 @@ Zostawiłem tak, bo dzięki temu liczby są porównywalne z `model.val()`.
 * przekazać zespołowi: importy z `alpr`, `pip install -r requirements.txt` po pullu, interfejsy `enhance` i `read_plate` (blok 3),
 * po pobraniu zbioru: `eval_alignment.py --split test` na prawdziwych danych przed i po refaktoryzacji (blok 6),
 * reszta bez zmian względem poprzedniego wpisu (trening na GPU, bloki 5-6).
+
+## 17.10.2026: porządki w kodzie i szybsze pobieranie zbioru
+
+### Punkt wyjścia
+Po pierwszej refaktoryzacji kod był nadal przegadany: hack `sys.path.insert` w każdym skrypcie, po 60-80 linii
+logiki w `main()` skryptów detekcji, konfiguracja źródeł jako słowniki z kluczami-flagami, logika jednego źródła
+rozrzucona po trzech plikach, komentarze w kodzie, notebook wywołujący tylko 4 skrypty. Cel: czytelna struktura,
+klasy tam, gdzie jest stan, kod bez komentarzy, wynik bit w bit ten sam.
+
+### Struktura
+| Było | Jest | Powód |
+|---|---|---|
+| `build/download.py` (`DATASETS`), `sources.py` (`select_*`), `combine.py` (`build_dataN`) | `build/sources.py`: `SourceDataset` i klasy `PolishPlates`, `Uc3mLp`, `AutoRia` | całe źródło w jednym miejscu, bez rozgałęzień na kluczach słownika |
+| `add_photo(out, rows, ...)`, pętla oryginał + kopia skopiowana dwa razy | `build/writer.py`: `CombinedWriter` (`add_photo`, `add_crop`, `save`, `summary`) | wiersze w obiekcie, jedna metoda `_variants` |
+| `detection/yolo.py`: `load_model`, `detect` | `detection/detector.py`: `PlateDetector` | model i parametry w jednym obiekcie |
+| `align_plate` i stałe modułu | `PlateAligner` (parametry) i `AlignedPlate` (crop, poly, method) | parametry konfigurowalne, wynik nazwany |
+| pętle po zdjęciach w skryptach | `detection/pipeline.py`, `evaluate_by_group`, `summarize_alignment`, `training.py` | skrypty tylko parsują argumenty |
+| `preprocessing/__init__.py`, `ocr/__init__.py` | `preprocessing.py`, `ocr.py` | pakiet z jednym plikiem to zbędny folder |
+| `scripts/combined_template/` | `alpr/build/template/` | to dane budowy zbioru |
+| `notebooks/detekcja_kaggle.ipynb` | komenda w README, sekcja "Detekcja tablic" | notebook tylko wołał skrypty |
+
+Dodatkowo: `.vscode/settings.json` ukrywa `.venv`, `__pycache__`, cache i `data/data2/annotations`;
+`requires-python >= 3.11` (`hashlib.file_digest`).
+
+### Pobieranie (`scripts/get_data.py`, `scripts/download_data.py`)
+| Zmiana | Powód |
+|---|---|
+| archiwum Kaggle w `data/_downloads/`, klient Kaggle wznawia przerwane pobieranie | wcześniej zip leżał w `data/combined`, a ponowne uruchomienie kończyło się błędem "nie jest pusty" |
+| rozpakowanie do katalogu tymczasowego i podmiana dopiero po sukcesie | `--force` kasował stary zbiór przed pobraniem nowego |
+| rozpakowanie równoległe (8 wątków) z od razu poprawionym `ocr/ocr/` | jeden przebieg zamiast rozpakowania i przenoszenia |
+| sprawdzanie plików jednym `os.walk` zamiast `exists()` na każdy plik | mniej wywołań systemowych |
+| SHA-256 zdjęć liczone równolegle, MD5 archiwum zapamiętywane w `<zip>.md5` | MD5 4.5 GB liczyło się przy każdym uruchomieniu |
+
+### Wynik
+Pomiar na danych syntetycznych (lokalnie brak tokenu Kaggle i zdjęć źródłowych):
+| Operacja | Przed | Po |
+|---|---|---|
+| weryfikacja SHA-256, 3000 plików po 400 kB | 1.38 s | 0.48 s |
+| rozpakowanie zipa, 2000 plików po 400 kB | 0.80 s | 0.45 s |
+
+Zgodność ze starym kodem (wzorce zapisane przed zmianami):
+| Test | Wynik |
+|---|---|
+| budowa zbioru na syntetycznych źródłach data1..3 (24 wiersze, 53 pliki) | identyczne bit w bit, utrwalone w `tests/test_build_combine_golden.py` |
+| `eval_detection.py --preds` (train, test), `eval_alignment.py` (etykiety i predykcje, przykłady) | identyczne pliki |
+| `detect_plates.py` z atrapą YOLO (`--split`, `--images --no-align`) | identyczne CSV i wycinki |
+| `pytest`, `ruff check`, `ruff format --check` | 76 testów przechodzi, lint czysty |
+
+### Stan na koniec dnia
+* [x] klasy źródeł, `CombinedWriter`, `PlateDetector`, `PlateAligner`, `pipeline`, `training`
+* [x] skrypty bez `sys.path`, kod bez komentarzy, notebook usunięty
+* [x] szybsze i wznawialne pobieranie zbioru
+* [x] README, CLAUDE.md
+* [ ] sprawdzenie `get_data.py` na prawdziwym Kaggle (brak tokenu lokalnie)
+
+### Do zrobienia (moja część)
+* po pullu: `pip install -e .` (skrypty nie działają już bez instalacji pakietu), przekazać to zespołowi (blok 3),
+* uruchomić `get_data.py` z tokenem i sprawdzić wznawianie po przerwaniu (blok 3),
+* trening na GPU komendą z README (bloki 5-6).

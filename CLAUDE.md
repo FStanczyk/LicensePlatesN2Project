@@ -16,15 +16,17 @@ Potok docelowy: folder zdjęć -> przetwarzanie -> detekcja i wyrównanie -> OCR
 ## Struktura
 
 * `alpr/`: pakiet z całą logiką (`pip install -e .`), opis modułów w README, sekcja "Struktura kodu":
-  `config` (ścieżki, `SEED`), `dataset` (`load_plates`, `crop_path`, `normalize_text`), `geometry` (`warp`, IoU),
-  `build/` (budowa zbioru), `preprocessing/` i `ocr/` (szkielety), `detection/` (YOLO, `align_plate`, metryki).
+  `config` (ścieżki, `SEED`), `dataset` (`load_plates`, `crop_path`, `normalize_text`, `write_csv`),
+  `geometry` (`warp`, IoU), `download` (HTTP, zip, Kaggle), `build/` (`sources.py`: klasa na źródło,
+  `writer.py`: `CombinedWriter`), `preprocessing.py` i `ocr.py` (szkielety),
+  `detection/` (`PlateDetector`, `PlateAligner`, `training`, `pipeline`, `metrics`).
 * `scripts/`: cienkie CLI wywołujące `alpr`:
   * `get_data.py`: pobiera gotowy zbiór z Kaggle do `data/combined/`. **Zwykle wystarczy tylko to.**
   * `download_data.py`, `build_dataset.py`: tylko do przebudowy zbioru (źródła w `data/data1..3/photos/`).
   * `train_yolo.py`, `eval_detection.py`, `eval_alignment.py`, `detect_plates.py`: detekcja
-    (opis w README, sekcja "Detekcja tablic"); `notebooks/detekcja_kaggle.ipynb` uruchamia je na GPU.
-* `scripts/combined_template/`: pliki kopiowane do `data/combined/` (README, data.yaml, metadane Kaggle).
-* `tests/`: pytest, bez danych i GPU; `test_build_golden.py` pilnuje powtarzalności zbioru.
+    (opis w README, sekcja "Detekcja tablic", tam też komenda do notebooka Kaggle na GPU).
+* `alpr/build/template/`: pliki kopiowane do `data/combined/` (README, data.yaml, metadane Kaggle).
+* `tests/`: pytest, bez danych i GPU; `test_build_golden.py` i `test_build_combine_golden.py` pilnują powtarzalności zbioru.
 * `runs/` (wagi) i `results/` (metryki, wycinki): wyniki skryptów, duże pliki poza gitem.
 * `data/dataN/`: w gicie tylko adnotacje, `labels.csv` i `SHA256SUMS`; zdjęcia są poza gitem.
 * `process_documentation/<imię>.md`: dziennik pracy każdej osoby (format: patrz skill `dokumentacja`).
@@ -61,11 +63,13 @@ Duże obliczenia (trening YOLO) robimy w Google Colab / notebookach Kaggle, data
 * W tekstach bez em dashów (używaj dwukropka, przecinka albo nawiasu) i bez emotek.
 * Logika w `alpr/`, skrypt tylko ją wywołuje. Nie duplikuj funkcji (np. `warp`, IoU, filtrów `plates.csv`):
   importuj z `alpr`. Każda nowa funkcja w `alpr/` ma test w `tests/`.
-* Skrypty: `#!/usr/bin/env python3`, docstring z sekcją "Użycie:", `argparse`, `ROOT = Path(__file__).resolve().parent.parent`
-  i `sys.path.insert(0, str(ROOT))` przed importem `alpr`, `main() -> int` i `sys.exit(main())`.
-  Pozostałe ścieżki i stałe z `alpr.config`.
+* Skrypty: `#!/usr/bin/env python3`, docstring z sekcją "Użycie:" (to tekst `--help`), `argparse`,
+  `main() -> int` i `sys.exit(main())`. Wymagają `pip install -e .` (bez `sys.path.insert`).
+  `main()` tylko parsuje argumenty, wywołuje `alpr` i drukuje wynik. Ścieżki i stałe z `alpr.config`.
+* Kod bez komentarzy `#` (poza `# noqa` itp.) i lakoniczny: docstring jednolinijkowy i tylko wtedy,
+  gdy nazwa nie wystarcza. Klasy tam, gdzie jest stan albo konfiguracja; czyste funkcje zostają funkcjami.
 * Styl: `ruff format` i `ruff check` (konfiguracja w `pyproject.toml`) muszą przechodzić.
-* Zmiany w `alpr/build/` zmieniają zbiór na Kaggle: `tests/test_build_golden.py` musi przechodzić
+* Zmiany w `alpr/build/` zmieniają zbiór na Kaggle: `tests/test_build_golden.py` i `test_build_combine_golden.py` muszą przechodzić
   albo zmiana jest świadoma i idzie razem z nową wersją zbioru.
 * Losowość zawsze ze stałym ziarnem (`SEED`), żeby wyniki były powtarzalne w całym zespole.
 * Commity: krótki tytuł w trybie rozkazującym ("Dodaj ...", "Przenieś ..."), w treści lista zmian per plik.

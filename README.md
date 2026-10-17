@@ -92,8 +92,10 @@ python3 scripts/get_data.py
 ```
 
 Potrzebny jest token API Kaggle: kaggle.com -> Settings -> API -> Create New Token, plik zapisz
-w `~/.kaggle/`. Skrypt pobiera ok. 4.5 GB, rozpakowuje i sprawdza, czy są wszystkie pliki z
-`plates.csv`. Przy kolejnym uruchomieniu nic nie pobiera; po nowej wersji na Kaggle użyj `--force`.
+w `~/.kaggle/`. Skrypt pobiera ok. 4.5 GB do `data/_downloads/` (przerwane pobieranie wznawia się
+po ponownym uruchomieniu), rozpakowuje równolegle i sprawdza, czy są wszystkie pliki z `plates.csv`.
+Przy kolejnym uruchomieniu nic nie pobiera; po nowej wersji na Kaggle użyj `--force` (stary zbiór
+jest podmieniany dopiero po udanym pobraniu).
 
 Na Kaggle (notebook) wystarczy dodać dataset przez "Add Input"; pliki są w
 `/kaggle/input/eu-license-plates-alpr/`. Uwaga: tam wycinki leżą o poziom głębiej, w `ocr/ocr/<split>/`,
@@ -164,11 +166,12 @@ kaggle datasets version -p data/combined -m "opis zmian" -r zip   # nowa wersja 
 
 * `download_data.py` z archiwów UC3M-LP i AUTO.RIA bierze tylko wybrane pliki. Wybór jest zapisany
   w `data/<zbiór>/labels.csv` (w gicie), więc za każdym razem wychodzi to samo. Sumy kontrolne
-  w `data/<zbiór>/SHA256SUMS`. Pobieranie można przerwać i wznowić (`--force`).
+  w `data/<zbiór>/SHA256SUMS` (sprawdzane równolegle). Pobieranie można przerwać i wznowić (`--force`).
 * `build_dataset.py` normalizuje etykiety, zmniejsza zdjęcia (dłuższy bok 1920 px), wycina i prostuje
   tablice, dodaje zniekształcenia i liczy `exposure`. Szczegóły decyzji: `process_documentation/filip.md`.
-* Logika obu skryptów jest w `alpr/build/`. `tests/test_build_golden.py` pilnuje, żeby po zmianach
-  w kodzie wychodził ten sam zbiór co na Kaggle.
+* Logika obu skryptów jest w `alpr/build/` (każde źródło to klasa w `sources.py`, zapis w `writer.py`).
+  `tests/test_build_golden.py` i `tests/test_build_combine_golden.py` pilnują, żeby po zmianach w kodzie
+  wychodził ten sam zbiór co na Kaggle.
 
 ---
 
@@ -188,14 +191,22 @@ python3 scripts/detect_plates.py --weights best.pt --images zdjecia/   # wycinki
 |---|---|---|
 | `train_yolo.py` | fine-tuning YOLO (domyślnie `yolo11n.pt`, 640 px) na `detection/data.yaml`, stałe ziarno | `runs/detect/<name>/weights/best.pt` |
 | `eval_detection.py` | P, R, F1, AP50, AP50-95 dla całego podziału i w grupach: źródło, `lighting`, `exposure`, `artificial_corruption`, siła, oryginał / kopia; `--images-root` testuje zdjęcia po filtrze | `results/detection_eval/<name>/metrics.csv` |
-| `eval_alignment.py` | porównuje wycinek ramki z `align_plate` względem prawdziwych 4 narożników (IoU, błąd narożnika) | `results/alignment_eval/<name>/summary.csv` |
+| `eval_alignment.py` | porównuje wycinek ramki z `PlateAligner` względem prawdziwych 4 narożników (IoU, błąd narożnika) | `results/alignment_eval/<name>/summary.csv` |
 | `detect_plates.py` | folder zdjęć albo podział z `plates.csv` -> wyprostowane wycinki + CSV detekcji | `results/detections/<name>/detections.csv`, `crops/` |
 
 Wszystkie skrypty przyjmują `--dataset`. Domyślnie to `data/combined`, a w notebooku Kaggle
-z podpiętym datasetem `/kaggle/input/eu-license-plates-alpr`. Trening i ewaluację na GPU uruchamia notebook
-`notebooks/detekcja_kaggle.ipynb`.
+z podpiętym datasetem `/kaggle/input/eu-license-plates-alpr`. Trening na GPU: nowy notebook Kaggle
+(Accelerator GPU, Internet włączony, Add Input: `filipstanczyk/eu-license-plates-alpr`) i komórka:
 
-Wyrównanie (`align_plate`): YOLO daje prostokątną ramkę, a tablica jest czworokątem. W ramce
+```bash
+!git clone -q https://github.com/FStanczyk/LicensePlatesN2Project.git && cd LicensePlatesN2Project && pip install -q -e . \
+  && python3 scripts/train_yolo.py --project /kaggle/working/runs --name yolo11n_640 \
+  && python3 scripts/eval_detection.py --weights /kaggle/working/runs/yolo11n_640/weights/best.pt --name yolo11n_640 \
+  && python3 scripts/eval_alignment.py --preds results/detection_eval/yolo11n_640/predictions.csv --name yolo11n_640 \
+  && python3 scripts/detect_plates.py --weights /kaggle/working/runs/yolo11n_640/weights/best.pt --split test
+```
+
+Wyrównanie (`PlateAligner`): YOLO daje prostokątną ramkę, a tablica jest czworokątem. W ramce
 powiększonej o 15% szukamy konturu tablicy (krawędzie Canny oraz jasne tło z progiem Otsu razem
 z niebieskim paskiem UE), przybliżamy go 4 narożnikami, doprecyzowujemy je dopasowaniem prostych
 do boków i prostujemy wycinek tą samą metodą co `build_dataset.py`. Gdy kontur nie pasuje do ramki
@@ -209,17 +220,19 @@ zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.
 ## Struktura kodu
 
 Logika jest w pakiecie `alpr/`, a skrypty w `scripts/` to cienkie CLI (argparse + wywołania `alpr`).
-Skrypty działają też bez instalacji pakietu, ale w notebookach i własnym kodzie importuj z `alpr`.
+Skrypty wymagają zainstalowanego pakietu (`pip install -e .`). Najczęściej używane rzeczy są w `alpr`:
+`from alpr import load_plates, PlateDetector, PlateAligner`.
 
 | Moduł | Co jest w środku | Kto |
 |---|---|---|
 | `alpr/config.py` | ścieżki, `SEED`, nazwa zbioru Kaggle, `default_dataset()` | wszyscy |
-| `alpr/dataset.py` | `load_plates`, `crop_path`, `normalize_text`, `exposure`, format `polygon` | wszyscy |
+| `alpr/dataset.py` | `load_plates`, `crop_path`, `normalize_text`, `exposure`, format `polygon`, `write_csv` | wszyscy |
 | `alpr/geometry.py` | narożniki, `warp` (prostowanie), IoU ramek i wielokątów | wszyscy |
-| `alpr/build/` | pobieranie źródeł, wybór podzbiorów, zniekształcenia, składanie `data/combined` | Stańczyk |
-| `alpr/preprocessing/` | `enhance(img, method)`: szkielet, metody do uzupełnienia | Stańczyk |
-| `alpr/detection/` | `load_model`, `detect`, `align_plate`, metryki detekcji i wyrównania | Włodarczyk |
-| `alpr/ocr/` | `read_plate(crop, engine)`, metryki OCR: szkielet do uzupełnienia | Golba |
+| `alpr/download.py` | pobieranie HTTP z wznawianiem, zdalne archiwa zip, zbiór z Kaggle, sumy kontrolne | wszyscy |
+| `alpr/build/` | `sources.py` (klasa na każde źródło: pobieranie, wybór podzbioru, składanie), `writer.py` (`CombinedWriter`), `corruptions.py` | Stańczyk |
+| `alpr/preprocessing.py` | `enhance(img, method)`: szkielet, metody do uzupełnienia | Stańczyk |
+| `alpr/detection/` | `PlateDetector`, `PlateAligner`, `training.py`, `pipeline.py` (przebiegi po zdjęciach), `metrics.py` | Włodarczyk |
+| `alpr/ocr.py` | `read_plate(crop, engine)`, metryki OCR: szkielet do uzupełnienia | Golba |
 
 Nowa funkcja trafia do `alpr/`, a skrypt tylko ją wywołuje. Testy i lint:
 
