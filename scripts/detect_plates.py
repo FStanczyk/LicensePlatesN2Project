@@ -8,9 +8,10 @@ Użycie:
 
 Wynik w --out (domyślnie results/detections/<nazwa>):
     detections.csv     image, det_id, conf, x1, y1, x2, y2, polygon, align, crop
-                       (image względem --images albo data/combined, crop względem --out;
-                       align: quad / rect / box, patrz plate_detection.align_plate)
-    crops/*.png        wycinki tablic, <nazwa zdjęcia>_<det_id>.png
+                       (image względem --images albo zbioru, crop względem --out;
+                       align: quad / rect / box, patrz alpr.detection.align_plate)
+    crops/*.png        wycinki tablic, <nazwa zdjęcia>_<det_id>.png; gdy zdjęcia są w różnych
+                       podfolderach, nazwa zawiera też podfolder ("a/b.jpg" -> "a__b_0.png")
 
 Zdjęcia, na których nic nie wykryto, też są w CSV (jeden wiersz z pustym det_id), żeby potok
 mógł je policzyć jako brak odczytu.
@@ -18,17 +19,28 @@ mógł je policzyć jako brak odczytu.
 
 import argparse
 import csv
+import os
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import cv2
-import pandas as pd
-
-from plate_detection import align_plate, box_corners, detect, list_images, load_model, warp
 
 ROOT = Path(__file__).resolve().parent.parent
-COMBINED = ROOT / "data" / "combined"
+sys.path.insert(0, str(ROOT))  # działa też bez pip install -e .
+
+from alpr.config import RESULTS, default_dataset
+from alpr.dataset import SPLITS, format_polygon, list_images, load_plates
+from alpr.detection import align_plate, detect, load_model
+from alpr.geometry import box_corners, warp
+
 FIELDS = ["image", "det_id", "conf", "x1", "y1", "x2", "y2", "polygon", "align", "crop"]
+
+
+def crop_name(rel: str, k: int, common: str) -> str:
+    """Nazwa wycinka ze ścieżki zdjęcia względem wspólnego katalogu wszystkich zdjęć (common),
+    żeby zdjęcia o tej samej nazwie w różnych podfolderach nie nadpisywały sobie wycinków."""
+    stem = PurePosixPath(rel).relative_to(common).with_suffix("").as_posix()
+    return f"crops/{stem.replace('/', '__')}_{k}.png"
 
 
 def main() -> int:
@@ -36,8 +48,8 @@ def main() -> int:
     parser.add_argument("--weights", required=True, help="wagi YOLO (best.pt z train_yolo.py)")
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--images", type=Path, help="folder ze zdjęciami (przeszukiwany rekurencyjnie)")
-    source.add_argument("--split", choices=["train", "val", "test"], help="całe zdjęcia z plates.csv")
-    parser.add_argument("--dataset", type=Path, default=COMBINED, help="z --split: katalog zbioru (z plates.csv)")
+    source.add_argument("--split", choices=SPLITS, help="całe zdjęcia z plates.csv")
+    parser.add_argument("--dataset", type=Path, default=default_dataset(), help="z --split: katalog zbioru (z plates.csv)")
     parser.add_argument("--originals-only", action="store_true", help="z --split: pomiń kopie ze sztucznym zniekształceniem")
     parser.add_argument("--conf", type=float, default=0.25, help="próg pewności detekcji")
     parser.add_argument("--imgsz", type=int, default=640)
@@ -51,16 +63,14 @@ def main() -> int:
         name = base.name
     else:
         base = args.dataset.resolve()
-        df = pd.read_csv(base / "plates.csv")
-        df = df[(df.sample_type == "full_photo") & (df.split == args.split)]
-        if args.originals_only:
-            df = df[df.artificial_corruption == "none"]
+        df = load_plates(base, sample_type="full_photo", split=args.split, originals_only=args.originals_only)
         images = sorted(df.image.unique())
         name = args.split
     if not images:
         print(f"Brak zdjęć w {base}")
         return 1
-    out = (args.out or ROOT / "results" / "detections" / name).resolve()
+    common = os.path.commonpath([PurePosixPath(rel).parent.as_posix() for rel in images])
+    out = (args.out or RESULTS / "detections" / name).resolve()
     (out / "crops").mkdir(parents=True, exist_ok=True)
 
     model = load_model(args.weights)
@@ -80,13 +90,13 @@ def main() -> int:
             else:
                 crop, poly, method = align_plate(img, det.box)
             methods[method] = methods.get(method, 0) + 1
-            crop_rel = f"crops/{Path(rel).stem}_{k}.png"
+            crop_rel = crop_name(rel, k, common)
             cv2.imwrite(str(out / crop_rel), crop)
             x1, y1, x2, y2 = det.box
             rows.append({
                 "image": rel, "det_id": k, "conf": round(det.conf, 4),
                 "x1": round(x1), "y1": round(y1), "x2": round(x2), "y2": round(y2),
-                "polygon": " ".join(str(round(v)) for v in poly.flatten()), "align": method, "crop": crop_rel,
+                "polygon": format_polygon(poly), "align": method, "crop": crop_rel,
             })
         if i % 100 == 0:
             print(f"  {i}/{len(images)}")
@@ -95,7 +105,7 @@ def main() -> int:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-    found = sum(n for n in methods.values())
+    found = sum(methods.values())
     empty = sum(1 for r in rows if "det_id" not in r)
     print(f"{len(images)} zdjęć, {found} tablic, {empty} zdjęć bez detekcji; wyrównanie: {methods}")
     print(f"Wynik: {out / 'detections.csv'}")

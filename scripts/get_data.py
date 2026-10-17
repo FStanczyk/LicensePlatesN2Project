@@ -2,7 +2,7 @@
 """Pobiera gotowy, znormalizowany zbiór z Kaggle do data/combined/ (wystarczy raz).
 
 Użycie:
-    pip install -r requirements.txt
+    pip install -e .
     python3 scripts/get_data.py            # pobierz, jeśli jeszcze nie ma
     python3 scripts/get_data.py --force    # pobierz ponownie (np. po nowej wersji na Kaggle)
 
@@ -18,8 +18,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATASET = "filipstanczyk/eu-license-plates-alpr"
-DEST = ROOT / "data" / "combined"
+sys.path.insert(0, str(ROOT))  # działa też bez pip install -e .
+
+from alpr.config import COMBINED, KAGGLE_DATASET
 
 
 def check(dest: Path) -> bool:
@@ -38,7 +39,7 @@ def check(dest: Path) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dest", type=Path, default=DEST, help=f"katalog docelowy (domyślnie {DEST.relative_to(ROOT)})")
+    parser.add_argument("--dest", type=Path, default=COMBINED, help=f"katalog docelowy (domyślnie {COMBINED.relative_to(ROOT)})")
     parser.add_argument("--force", action="store_true", help="usuń i pobierz ponownie")
     args = parser.parse_args()
     dest = args.dest.expanduser().resolve()
@@ -57,8 +58,8 @@ def main() -> int:
     dest.mkdir(parents=True, exist_ok=True)
     api = KaggleApi()
     api.authenticate()
-    print(f"Pobieranie {DATASET} do {dest} (ok. 4.5 GB)")
-    api.dataset_download_files(DATASET, path=str(dest), unzip=True, quiet=False)
+    print(f"Pobieranie {KAGGLE_DATASET} do {dest} (ok. 4.5 GB)")
+    api.dataset_download_files(KAGGLE_DATASET, path=str(dest), unzip=True, quiet=False)
     # na Kaggle wycinki leżą w ocr/ocr/<split>/ (tak rozpakował się ocr.zip), a plates.csv
     # wskazuje ocr/<split>/, więc podnosimy je o poziom wyżej
     nested = dest / "ocr" / "ocr"

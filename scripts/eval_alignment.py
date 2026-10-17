@@ -9,7 +9,7 @@ Użycie:
 
 Porównujemy dwie metody na każdej tablicy z narożnikami w plates.csv:
     box       zwykły wycinek prostokątnej ramki (bez prostowania),
-    aligned   plate_detection.align_plate (szukanie czworokąta, fallback na ramkę).
+    aligned   alpr.detection.align_plate (szukanie czworokąta, fallback na ramkę).
 Metryki: IoU wielokąta z prawdziwym czworokątem i średni błąd narożnika w wysokościach tablicy.
 Uwaga: w data1 etykiety są prostokątami, więc tylko data2 (UC3M-LP) ma prawdziwe narożniki
 z perspektywą; wyniki podajemy osobno dla każdego źródła.
@@ -28,27 +28,14 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from plate_detection import align_plate, box_corners, box_iou, polygon_iou, warp
-
 ROOT = Path(__file__).resolve().parent.parent
-COMBINED = ROOT / "data" / "combined"
+sys.path.insert(0, str(ROOT))  # działa też bez pip install -e .
 
-
-def corner_error(est: np.ndarray, gt: np.ndarray) -> float:
-    """Średnia odległość odpowiadających sobie narożników, w wysokościach tablicy."""
-    height = (np.linalg.norm(gt[3] - gt[0]) + np.linalg.norm(gt[2] - gt[1])) / 2
-    return float(np.linalg.norm(est - gt, axis=1).mean() / max(height, 1.0))
-
-
-def detector_box(preds: pd.DataFrame, image: str, gt_box: np.ndarray, conf: float) -> np.ndarray | None:
-    """Najlepiej pasująca ramka z detektora (IoU >= 0.5, pewność >= conf) albo None."""
-    p = preds[(preds.image == image) & (preds.conf >= conf)]
-    best, best_iou = None, 0.5
-    for box in p[["x1", "y1", "x2", "y2"]].to_numpy(float):
-        iou = box_iou(box, gt_box)
-        if iou >= best_iou:
-            best, best_iou = box, iou
-    return best
+from alpr.config import RESULTS, default_dataset
+from alpr.dataset import SPLITS, load_plates, parse_polygon
+from alpr.detection import align_plate
+from alpr.detection.metrics import BOX, best_matching_box, corner_error
+from alpr.geometry import box_corners, polygon_iou, warp
 
 
 def example(img: np.ndarray, box: np.ndarray, aligned: np.ndarray, gt: np.ndarray, height: int = 64) -> np.ndarray:
@@ -59,8 +46,8 @@ def example(img: np.ndarray, box: np.ndarray, aligned: np.ndarray, gt: np.ndarra
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dataset", type=Path, default=COMBINED, help="katalog zbioru (z plates.csv)")
-    parser.add_argument("--split", default="all", choices=["all", "train", "val", "test"])
+    parser.add_argument("--dataset", type=Path, default=default_dataset(), help="katalog zbioru (z plates.csv)")
+    parser.add_argument("--split", default="all", choices=["all", *SPLITS])
     parser.add_argument("--preds", type=Path, help="predictions.csv z eval_detection.py; bez tego ramki z etykiet")
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--examples", type=int, default=0, help="ile przykładowych obrazków zapisać")
@@ -68,13 +55,15 @@ def main() -> int:
     args = parser.parse_args()
 
     dataset = args.dataset.resolve()
-    df = pd.read_csv(dataset / "plates.csv")
-    df = df[(df.sample_type == "full_photo") & df.polygon.notna()]
-    if args.split != "all":
-        df = df[df.split == args.split]
-    preds = pd.read_csv(args.preds) if args.preds else None
-    name = args.name or ("detector" if preds is not None else "gt_boxes")
-    out = ROOT / "results" / "alignment_eval" / name
+    df = load_plates(dataset, sample_type="full_photo", split=None if args.split == "all" else args.split)
+    df = df[df.polygon.notna()]
+    pred_boxes = None
+    if args.preds:
+        preds = pd.read_csv(args.preds)
+        preds = preds[preds.conf >= args.conf]
+        pred_boxes = {image: g[BOX].to_numpy(float) for image, g in preds.groupby("image")}
+    name = args.name or ("detector" if pred_boxes is not None else "gt_boxes")
+    out = RESULTS / "alignment_eval" / name
     out.mkdir(parents=True, exist_ok=True)
     if args.examples:
         (out / "examples").mkdir(exist_ok=True)
@@ -86,16 +75,16 @@ def main() -> int:
             print(f"  BŁĄD: nie da się wczytać {image}")
             continue
         for _, r in g.iterrows():
-            gt = np.array(r.polygon.split(), dtype=np.float32).reshape(4, 2)
+            gt = parse_polygon(r.polygon)
             box = np.array([r.x1, r.y1, r.x2, r.y2], dtype=np.float32)
-            if preds is not None:
-                box = detector_box(preds, image, box, args.conf)
+            if pred_boxes is not None:
+                box = best_matching_box(pred_boxes.get(image, np.zeros((0, 4))), box)
                 if box is None:
                     continue  # tablica niewykryta: to błąd detekcji, liczony w eval_detection.py
             aligned, poly, method = align_plate(img, box)
             rows.append({
-                "plate_id": r.plate_id, "source": r.plate_id.split("_")[0], "lighting": r.lighting,
-                "exposure": r.exposure, "corrupted": "original" if r.artificial_corruption == "none" else "corrupted",
+                "plate_id": r.plate_id, "source": r.source, "lighting": r.lighting,
+                "exposure": r.exposure, "corrupted": r.corrupted,
                 "iou_box": polygon_iou(box_corners(box), gt), "iou_aligned": polygon_iou(poly, gt),
                 "err_box": corner_error(box_corners(box), gt), "err_aligned": corner_error(poly, gt),
                 "method": method,

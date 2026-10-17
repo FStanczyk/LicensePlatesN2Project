@@ -12,7 +12,7 @@ Użycie:
 Grupy: źródło (data1 = PL, data2 = UC3M-LP), lighting, exposure, artificial_corruption, siła
 zniekształcenia oraz oryginał / kopia. Atrybuty tablicy przenosimy na zdjęcie; jeśli tablice na
 jednym zdjęciu mają różne wartości, zdjęcie trafia do grupy "mixed". Predykcje liczone są z progiem
-0.001 (potrzebne do AP), a P/R/F1 podajemy dla progu --conf.
+0.001 (potrzebne do AP), a P/R/F1 podajemy dla progu --conf. Metryki: alpr/detection/metrics.py.
 
 Wynik w results/detection_eval/<name>/:
     predictions.csv    image, conf, x1, y1, x2, y2 (wszystkie predykcje)
@@ -25,15 +25,15 @@ import sys
 from pathlib import Path
 
 import cv2
-import numpy as np
 import pandas as pd
 
-from plate_detection import box_iou, detect, load_model
-
 ROOT = Path(__file__).resolve().parent.parent
-COMBINED = ROOT / "data" / "combined"
-IOU_THRESHOLDS = np.linspace(0.5, 0.95, 10)
-GROUPS = ["source", "lighting", "exposure", "artificial_corruption", "artificial_severity", "corrupted"]
+sys.path.insert(0, str(ROOT))  # działa też bez pip install -e .
+
+from alpr.config import RESULTS, default_dataset
+from alpr.dataset import SPLITS, load_plates
+from alpr.detection import detect, load_model
+from alpr.detection.metrics import BOX, GROUPS, evaluate, image_groups
 
 
 def predict_all(weights: str, images: list[str], base: Path, imgsz: int) -> pd.DataFrame:
@@ -45,89 +45,18 @@ def predict_all(weights: str, images: list[str], base: Path, imgsz: int) -> pd.D
             print(f"  BŁĄD: nie da się wczytać {base / rel}")
             continue
         for det in detect(model, img, conf=0.001, imgsz=imgsz):
-            rows.append({"image": rel, "conf": det.conf, **dict(zip(["x1", "y1", "x2", "y2"], det.box))})
+            rows.append({"image": rel, "conf": det.conf, **dict(zip(BOX, det.box, strict=True))})
         if i % 100 == 0:
             print(f"  {i}/{len(images)}")
-    return pd.DataFrame(rows, columns=["image", "conf", "x1", "y1", "x2", "y2"])
-
-
-def match(pred: np.ndarray, gt: np.ndarray, threshold: float) -> tuple[np.ndarray, np.ndarray]:
-    """Zachłanne dopasowanie predykcji (posortowanych malejąco po pewności) do tablic.
-    Zwraca (tp dla każdej predykcji, indeks dopasowanej predykcji dla każdej tablicy albo -1)."""
-    tp = np.zeros(len(pred), dtype=bool)
-    owner = np.full(len(gt), -1)
-    for i, p in enumerate(pred):
-        ious = [box_iou(p, g) if owner[j] < 0 else 0.0 for j, g in enumerate(gt)]
-        if ious and max(ious) >= threshold:
-            j = int(np.argmax(ious))
-            tp[i], owner[j] = True, i
-    return tp, owner
-
-
-def average_precision(tp: np.ndarray, conf: np.ndarray, n_gt: int) -> float:
-    """AP z interpolacją w 101 punktach (jak ultralytics / COCO)."""
-    if n_gt == 0:
-        return float("nan")
-    if len(tp) == 0:
-        return 0.0
-    tp = tp[np.argsort(-conf, kind="stable")]
-    ctp = np.cumsum(tp)
-    recall = ctp / n_gt
-    precision = ctp / np.arange(1, len(tp) + 1)
-    mrec = np.concatenate([[0.0], recall, [1.0]])
-    mpre = np.concatenate([[1.0], precision, [0.0]])
-    mpre = np.flip(np.maximum.accumulate(np.flip(mpre)))
-    x = np.linspace(0, 1, 101)
-    return float(np.trapezoid(np.interp(x, mrec, mpre), x))
-
-
-def evaluate(gt: pd.DataFrame, preds: pd.DataFrame, conf: float) -> tuple[dict, pd.DataFrame]:
-    """Metryki dla zbioru zdjęć: gt = wiersze plates.csv, preds = predykcje na tych zdjęciach."""
-    tps = {t: [] for t in IOU_THRESHOLDS}
-    confs, plates = [], []
-    pred_groups = dict(tuple(preds.groupby("image")))
-    for image, g in gt.groupby("image"):
-        boxes = g[["x1", "y1", "x2", "y2"]].to_numpy(float)
-        p = pred_groups.get(image)
-        p = p.sort_values("conf", ascending=False) if p is not None else preds.iloc[:0]
-        pb, pc = p[["x1", "y1", "x2", "y2"]].to_numpy(float), p.conf.to_numpy(float)
-        confs.append(pc)
-        for t in IOU_THRESHOLDS:
-            tp, _ = match(pb, boxes, t)
-            tps[t].append(tp)
-        # stan tablic przy roboczym progu pewności (do P/R i analizy błędów)
-        keep = pc >= conf
-        _, owner = match(pb[keep], boxes, 0.5)
-        for (_, row), o, box in zip(g.iterrows(), owner, boxes):
-            best = max((box_iou(b, box) for b in pb[keep]), default=0.0)
-            plates.append({"plate_id": row.plate_id, "image": image, "detected": int(o >= 0),
-                           "iou": round(best, 3), "conf": round(pc[keep][o], 3) if o >= 0 else ""})
-    conf_all = np.concatenate(confs) if confs else np.zeros(0)
-    n_gt = len(gt)
-    aps = [average_precision(np.concatenate(tps[t]), conf_all, n_gt) for t in IOU_THRESHOLDS]
-    tp50 = np.concatenate(tps[IOU_THRESHOLDS[0]])[conf_all >= conf] if len(conf_all) else np.zeros(0)
-    p = tp50.sum() / len(tp50) if len(tp50) else 0.0
-    r = tp50.sum() / n_gt if n_gt else float("nan")
-    f1 = 2 * p * r / (p + r) if p + r > 0 else 0.0
-    metrics = {"images": gt.image.nunique(), "plates": n_gt, "P": p, "R": r, "F1": f1,
-               "AP50": aps[0], "AP50_95": float(np.mean(aps))}
-    return metrics, pd.DataFrame(plates)
-
-
-def image_groups(gt: pd.DataFrame) -> pd.DataFrame:
-    """Dla każdego zdjęcia wartość każdej grupy (albo "mixed", gdy tablice się różnią)."""
-    gt = gt.assign(source=gt.plate_id.str.split("_").str[0],
-                   corrupted=np.where(gt.artificial_corruption == "none", "original", "corrupted"))
-    agg = gt.groupby("image")[GROUPS].agg(lambda s: s.iloc[0] if s.nunique() == 1 else "mixed")
-    return agg.astype(str)
+    return pd.DataFrame(rows, columns=["image", "conf", *BOX])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--weights", help="wagi YOLO; niepotrzebne z --preds")
     parser.add_argument("--preds", type=Path, help="gotowy predictions.csv (pomija uruchamianie modelu)")
-    parser.add_argument("--dataset", type=Path, default=COMBINED, help="katalog zbioru (z plates.csv)")
-    parser.add_argument("--split", default="test", choices=["train", "val", "test"])
+    parser.add_argument("--dataset", type=Path, default=default_dataset(), help="katalog zbioru (z plates.csv)")
+    parser.add_argument("--split", default="test", choices=SPLITS)
     parser.add_argument("--images-root", type=Path, default=None,
                         help="katalog z obrazami o tych samych ścieżkach względnych co zbiór (np. po filtrze)")
     parser.add_argument("--conf", type=float, default=0.25, help="próg pewności dla P/R/F1")
@@ -138,10 +67,9 @@ def main() -> int:
         parser.error("podaj --weights albo --preds")
 
     images_root = (args.images_root or args.dataset).resolve()
-    df = pd.read_csv(args.dataset / "plates.csv")
-    gt = df[(df.sample_type == "full_photo") & (df.split == args.split)].copy()
+    gt = load_plates(args.dataset, sample_type="full_photo", split=args.split)
     images = sorted(gt.image.unique())
-    out = ROOT / "results" / "detection_eval" / args.name
+    out = RESULTS / "detection_eval" / args.name
     out.mkdir(parents=True, exist_ok=True)
 
     if args.preds:

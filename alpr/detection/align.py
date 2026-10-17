@@ -1,86 +1,20 @@
-"""Detekcja tablic (YOLO), przycinanie i wyrównanie perspektywy: funkcje wspólne dla skryptów.
+"""Wyrównanie perspektywy wykrytej tablicy.
 
-Moduł nie jest skryptem, importują go detect_plates.py, eval_detection.py, eval_alignment.py
-(i docelowo potok end-to-end):
-
-    from plate_detection import load_model, detect, align_plate
-    model = load_model("runs/detect/plates/weights/best.pt")
-    for det in detect(model, img):
-        aligned, poly, method = align_plate(img, det.box)
-
-Wyrównanie: YOLO zwraca tylko prostokątną ramkę, a tablica na zdjęciu jest zwykle czworokątem
-(perspektywa, obrót). Szukamy więc 4 narożników tablicy wewnątrz ramki powiększonej o margines
-i prostujemy wycinek przekształceniem perspektywicznym (jak build_dataset.py robi to dla etykiet).
+YOLO zwraca tylko prostokątną ramkę, a tablica na zdjęciu jest zwykle czworokątem (perspektywa,
+obrót). Szukamy więc 4 narożników tablicy wewnątrz ramki powiększonej o margines i prostujemy
+wycinek przekształceniem perspektywicznym (geometry.warp, jak przy budowie zbioru).
 Gdy narożników nie da się wiarygodnie znaleźć, zwracamy zwykły wycinek ramki.
 """
-
-from dataclasses import dataclass
-from pathlib import Path
 
 import cv2
 import numpy as np
 
-IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+from alpr.geometry import box_corners, box_iou, order_corners, warp
+
 MARGIN = 0.15          # margines wokół ramki przy szukaniu narożników (ułamek szerokości/wysokości)
 WORK_WIDTH = 320       # szerokość, do której skalujemy wycinek przed szukaniem narożników
 MIN_IOU = 0.6          # minimalne IoU ramki znalezionego czworokąta z ramką z YOLO
 ASPECT = (1.0, 7.0)    # dopuszczalny stosunek szerokości do wysokości tablicy (2 wiersze ok. 1.5, 1 wiersz ok. 4.7)
-
-
-@dataclass
-class Detection:
-    box: np.ndarray    # x1, y1, x2, y2 w pikselach
-    conf: float
-
-
-def load_model(weights: str | Path):
-    """Ładuje model YOLO (ultralytics); import tutaj, żeby reszta modułu działała bez torcha."""
-    from ultralytics import YOLO
-    return YOLO(str(weights))
-
-
-def detect(model, img: np.ndarray, conf: float = 0.25, imgsz: int = 640) -> list[Detection]:
-    """Wykrywa tablice na obrazie BGR, zwraca ramki posortowane malejąco po pewności."""
-    result = model.predict(img, conf=conf, imgsz=imgsz, verbose=False)[0]
-    boxes = result.boxes.xyxy.cpu().numpy()
-    confs = result.boxes.conf.cpu().numpy()
-    dets = [Detection(b, float(c)) for b, c in zip(boxes, confs)]
-    return sorted(dets, key=lambda d: -d.conf)
-
-
-def list_images(folder: Path) -> list[Path]:
-    return sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMG_EXTS)
-
-
-def box_iou(a: np.ndarray, b: np.ndarray) -> float:
-    """IoU dwóch ramek x1, y1, x2, y2."""
-    w = min(a[2], b[2]) - max(a[0], b[0])
-    h = min(a[3], b[3]) - max(a[1], b[1])
-    inter = max(0.0, w) * max(0.0, h)
-    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-    return inter / union if union > 0 else 0.0
-
-
-def order_corners(points: np.ndarray) -> np.ndarray:
-    """Porządkuje 4 punkty: lewy górny, prawy górny, prawy dolny, lewy dolny (jak four_corners
-    w build_dataset.py)."""
-    s, d = points.sum(axis=1), points[:, 0] - points[:, 1]
-    return points[[s.argmin(), d.argmax(), s.argmax(), d.argmin()]].astype(np.float32)
-
-
-def box_corners(box: np.ndarray) -> np.ndarray:
-    x1, y1, x2, y2 = box
-    return np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], dtype=np.float32)
-
-
-def warp(img: np.ndarray, poly: np.ndarray) -> np.ndarray:
-    """Prostuje tablicę z 4 narożników (lewy górny, prawy górny, prawy dolny, lewy dolny).
-    Ta sama metoda co w build_dataset.py, więc wycinki z detekcji wyglądają jak wycinki z etykiet."""
-    tl, tr, br, bl = poly
-    w = max(1, int(max(np.linalg.norm(tr - tl), np.linalg.norm(br - bl))))
-    h = max(1, int(max(np.linalg.norm(bl - tl), np.linalg.norm(br - tr))))
-    dst = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]], dtype=np.float32)
-    return cv2.warpPerspective(img, cv2.getPerspectiveTransform(poly.astype(np.float32), dst), (w, h))
 
 
 def _masks(bgr: np.ndarray) -> list[tuple[str, np.ndarray]]:
@@ -187,11 +121,3 @@ def align_plate(img: np.ndarray, box: np.ndarray, margin: float = MARGIN) -> tup
     else:
         poly, method = found[0] + np.array([cx1, cy1], dtype=np.float32), found[1]
     return warp(img, poly), poly, method
-
-
-def polygon_iou(a: np.ndarray, b: np.ndarray) -> float:
-    """IoU dwóch wypukłych czworokątów (4x2)."""
-    a, b = a.astype(np.float32), b.astype(np.float32)
-    inter, _ = cv2.intersectConvexConvex(a, b)
-    union = cv2.contourArea(a) + cv2.contourArea(b) - inter
-    return float(inter / union) if union > 0 else 0.0

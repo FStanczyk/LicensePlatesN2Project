@@ -1,4 +1,2 @@
-kaggle
-pandas
-opencv-python
-ultralytics
+# instaluje pakiet alpr z zależnościami z pyproject.toml (do budowy zbioru: pip install -e ".[build]")
+-e .
