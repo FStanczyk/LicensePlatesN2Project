@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "alpr"
 version = "0.1.0"
 description = "Rozpoznawanie tablic rejestracyjnych: wpływ oświetlenia i poprawy obrazu na detekcję i OCR"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "numpy",
     "pandas",
@@ -17,23 +17,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# tylko do przebudowy zbioru (scripts/build_dataset.py)
 build = ["imagecorruptions==1.1.2", "scikit-image"]
 dev = ["pytest", "ruff"]
 
 [tool.setuptools.packages.find]
 include = ["alpr*"]
 
+[tool.setuptools.package-data]
+"alpr.build" = ["template/**/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
-extend-exclude = ["notebooks", "*.md"]
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-
-[tool.ruff.lint.per-file-ignores]
-# skrypty dopisują katalog repo do sys.path przed importem alpr (działają bez pip install -e .)
-"scripts/*" = ["E402"]

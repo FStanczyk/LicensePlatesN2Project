@@ -30,7 +30,6 @@ def test_warp_rozmiar_i_narozniki():
     img = np.random.default_rng(0).integers(0, 256, (50, 80, 3), dtype=np.uint8)
     out = warp(img, box_corners(np.array([10, 5, 60, 25])))
     assert out.shape == (20, 50, 3)
-    # narożniki ramki trafiają w narożniki wycinku (środek jest lekko przeskalowany: 50 px -> 0..49)
     np.testing.assert_array_equal(out[0, 0], img[5, 10])
 
 

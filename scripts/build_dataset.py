@@ -1,62 +1,43 @@
 #!/usr/bin/env python3
-"""Składa data1, data2 i data3 w jeden znormalizowany zbiór w data/combined/ (do wrzucenia na Kaggle).
+"""Składa data1..3 w jeden zbiór w data/combined/ (do wrzucenia na Kaggle).
 
 Użycie:
-    pip install -e ".[build]"                   # imagecorruptions==1.1.2, scikit-image
-    python3 scripts/download_data.py            # najpierw pobierz zbiory źródłowe
-    python3 scripts/build_dataset.py            # zbuduj data/combined/
+    pip install -e ".[build]"
+    python3 scripts/download_data.py
+    python3 scripts/build_dataset.py
 
-Logika (zniekształcenia, wycinki, etykiety YOLO, exposure): alpr/build/combine.py.
 Wynik: plates.csv, detection/ (zdjęcia, etykiety YOLO, data.yaml), ocr/<split>/ (wycinki).
 """
 
 import argparse
-import csv
-import shutil
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))  # działa też bez pip install -e .
-
-from alpr.build.combine import BUILDERS, SOURCES
-from alpr.config import COMBINED, DATA_DIR
-from alpr.dataset import FIELDS
+from alpr.build.sources import SOURCES
+from alpr.build.writer import CombinedWriter
+from alpr.config import COMBINED
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", type=Path, default=COMBINED, help="katalog wynikowy (domyślnie data/combined)")
+    parser.add_argument("--out", type=Path, default=COMBINED, help="katalog wynikowy")
     args = parser.parse_args()
-    out = args.out.resolve()
 
-    missing = [d for d in SOURCES if not (DATA_DIR / d / "photos").is_dir()]
+    missing = [name for name, source in SOURCES.items() if not source.photos.is_dir()]
     if missing:
         print(f"Brak zdjęć dla: {', '.join(missing)}. Uruchom najpierw scripts/download_data.py")
         return 1
-    if out.exists():
-        shutil.rmtree(out)
-    shutil.copytree(ROOT / "scripts" / "combined_template", out)
+    writer = CombinedWriter.create(args.out.resolve())
+    for name, source in SOURCES.items():
+        before = len(writer.rows)
+        source.build(writer)
+        print(f"[{name}] {len(writer.rows) - before} wierszy (oryginał + kopia)")
+    path = writer.save()
 
-    rows = []
-    for name in SOURCES:
-        print(f"[{name}]")
-        before = len(rows)
-        BUILDERS[name](DATA_DIR / name, out, rows)
-        print(f"  {len(rows) - before} wierszy (oryginał + zniekształcona kopia)")
-
-    with open(out / "plates.csv", "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDS)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    counts = {}
-    for r in rows:
-        key = (r["sample_type"], r["split"], r["artificial_corruption"] != "none")
-        counts[key] = counts.get(key, 0) + 1
-    print(f"Razem {len(rows)} tablic w {out} (oryginał / zniekształcona kopia):")
+    counts = writer.summary()
+    print(f"Razem {len(writer.rows)} tablic w {path} (oryginał / kopia):")
     for kind, split in sorted({k[:2] for k in counts}):
-        print(f"  {kind} {split}: {counts.get((kind, split, False), 0)} / {counts.get((kind, split, True), 0)}")
+        print(f"  {kind} {split}: {counts[kind, split, False]} / {counts[kind, split, True]}")
     return 0
 
 

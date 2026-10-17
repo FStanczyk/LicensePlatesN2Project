@@ -2,11 +2,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpr.detection.metrics import average_precision, best_matching_box, corner_error, evaluate, image_groups, match
-
-# Wartości jak w ultralytics (interpolacja liniowa w 101 punktach z punktem końcowym recall 1,
-# precision 0): idealna detekcja daje 0.995, a przy niepełnym recall AP jest nieco zawyżone.
-# Dzięki temu liczby są porównywalne z metrykami z treningu (model.val()).
+from alpr.detection.metrics import (
+    average_precision,
+    best_matching_box,
+    corner_error,
+    evaluate,
+    evaluate_by_group,
+    image_groups,
+    match,
+    summarize_alignment,
+)
 
 
 def test_average_precision_przypadki_brzegowe():
@@ -16,7 +21,6 @@ def test_average_precision_przypadki_brzegowe():
 
 
 def test_average_precision_kolejnosc_po_pewnosci():
-    # jedna z dwóch tablic wykryta i fałszywy alarm: lepiej, gdy trafienie ma wyższą pewność
     good = average_precision(np.array([True, False]), np.array([0.9, 0.5]), 2)
     bad = average_precision(np.array([True, False]), np.array([0.5, 0.9]), 2)
     assert good == pytest.approx(0.6225)
@@ -88,8 +92,7 @@ def test_evaluate_brak_predykcji_i_prog_pewnosci():
     gt = make_gt()
     preds = pd.DataFrame([{"image": "a.jpg", "conf": 0.1, "x1": 0, "y1": 0, "x2": 100, "y2": 30}])
     metrics, plates = evaluate(gt, preds, 0.25)
-    assert metrics["R"] == 0.0  # jedyna predykcja poniżej progu
-    # ale liczy się do AP (1 z 3 tablic wykryta, bez fałszywych alarmów)
+    assert metrics["R"] == 0.0
     assert metrics["AP50"] == pytest.approx(average_precision(np.array([True]), np.array([0.1]), 3))
     assert plates.detected.tolist() == [0, 0, 0]
 
@@ -111,3 +114,36 @@ def test_best_matching_box():
     boxes = np.array([[0, 0, 10, 10], [1, 1, 11, 11], [50, 50, 60, 60]], float)
     np.testing.assert_array_equal(best_matching_box(boxes, np.array([1, 1, 11, 11.0])), boxes[1])
     assert best_matching_box(boxes, np.array([100, 100, 110, 110.0])) is None
+
+
+def test_evaluate_by_group():
+    gt = make_gt()
+    preds = gt[["image", "x1", "y1", "x2", "y2"]].iloc[:1].assign(conf=0.9)
+    table, plates = evaluate_by_group(gt, preds, 0.25)
+    rows = table.set_index(["group", "value"])
+    assert rows.loc[("all", "all"), "plates"] == 3
+    assert rows.loc[("source", "data1"), "R"] == 1.0
+    assert rows.loc[("source", "data2"), "R"] == 0.0
+    assert rows.loc[("exposure", "mixed"), "images"] == 1
+    assert plates.detected.tolist() == [1, 0, 0]
+
+
+def test_summarize_alignment():
+    res = pd.DataFrame(
+        {
+            "source": ["data1", "data2"],
+            "lighting": ["day", "night"],
+            "exposure": ["normal", "normal"],
+            "corrupted": ["original", "original"],
+            "method": ["quad", "box"],
+            "iou_box": [0.5, 0.8],
+            "iou_aligned": [0.9, 0.8],
+            "err_box": [0.4, 0.1],
+            "err_aligned": [0.1, 0.1],
+        }
+    )
+    summary = summarize_alignment(res)
+    assert summary.loc[("all", "all"), "plates"] == 2
+    assert summary.loc[("all", "all"), "better"] == 0.5
+    assert summary.loc[("method", "quad"), "iou_aligned"] == pytest.approx(0.9)
+    assert list(summary.columns) == ["plates", "iou_box", "iou_aligned", "err_box", "err_aligned", "better"]

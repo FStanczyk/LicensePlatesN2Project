@@ -1,11 +1,11 @@
-"""Rozpoznawanie tablic rejestracyjnych (ALPR): wspólny kod dla skryptów w scripts/ i notebooków.
+"""Rozpoznawanie tablic rejestracyjnych (ALPR).
 
-Moduły:
-    config          ścieżki, ziarno losowości, nazwa zbioru na Kaggle
-    dataset         wczytywanie i filtrowanie plates.csv, normalizacja tekstu tablicy
-    geometry        narożniki, prostowanie perspektywy, IoU
-    build           pobieranie zbiorów źródłowych i składanie data/combined (Stańczyk)
-    preprocessing   metody poprawy obrazu (Stańczyk)
-    detection       detekcja YOLO, wyrównanie tablicy, metryki detekcji (Włodarczyk)
-    ocr             odczyt znaków i metryki OCR (Golba)
+Moduły: config, dataset, geometry, download, preprocessing (Stańczyk), detection (Włodarczyk),
+ocr (Golba), build (budowa zbioru, Stańczyk).
 """
+
+from alpr.config import SEED
+from alpr.dataset import crop_path, load_plates, normalize_text
+from alpr.detection import PlateAligner, PlateDetector
+
+__all__ = ["SEED", "PlateAligner", "PlateDetector", "crop_path", "load_plates", "normalize_text"]

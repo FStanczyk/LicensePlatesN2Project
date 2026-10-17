@@ -2,7 +2,17 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpr.dataset import FIELDS, crop_path, exposure, format_polygon, load_plates, normalize_text, parse_polygon
+from alpr.dataset import (
+    FIELDS,
+    crop_path,
+    exposure,
+    format_polygon,
+    list_images,
+    load_plates,
+    normalize_text,
+    parse_polygon,
+    write_csv,
+)
 
 
 @pytest.mark.parametrize(("raw", "text"), [("wa 123-45", "WA12345"), ("61*7*dx", "61*7*DX"), ("ÄB 1", "B1"), ("", "")])
@@ -68,3 +78,15 @@ def test_crop_path_lokalnie_i_na_kaggle(tmp_path):
     (kaggle / "ocr" / "ocr" / "test").mkdir(parents=True)
     (kaggle / "ocr" / "ocr" / "test" / "a.png").touch()
     assert crop_path(kaggle, "ocr/test/a.png") == kaggle / "ocr" / "ocr" / "test" / "a.png"
+
+
+def test_write_csv_puste_pola(tmp_path):
+    write_csv(tmp_path / "a.csv", [{"a": 1, "b": 2}, {"a": 3}], ["a", "b"])
+    assert (tmp_path / "a.csv").read_text().splitlines() == ["a,b", "1,2", "3,"]
+
+
+def test_list_images(tmp_path):
+    for name in ["b/x.JPG", "a.png", "c.txt"]:
+        (tmp_path / name).parent.mkdir(exist_ok=True)
+        (tmp_path / name).touch()
+    assert [p.relative_to(tmp_path).as_posix() for p in list_images(tmp_path)] == ["a.png", "b/x.JPG"]

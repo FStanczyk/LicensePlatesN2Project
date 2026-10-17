@@ -1,75 +1,54 @@
 #!/usr/bin/env python3
-"""Pobiera zbiory zdjęć (Kaggle, Zenodo, Nomeroff Net) i rozpakowuje je do data/<nazwa>/.
-
-Zbiory z kluczem "sample" nie są pobierane w całości: skrypt czyta spis archiwum zdalnie
-(HTTP Range), losuje podzbiór i ściąga tylko wybrane pliki. Wybór jest zapisany
-w data/<nazwa>/labels.csv (w gicie), więc każdy dostaje te same zdjęcia. Przerwane
-pobieranie wznawia się przez --force (pobrane już pliki są pomijane).
+"""Pobiera zbiory źródłowe (Kaggle, Zenodo, Nomeroff Net) do data/<nazwa>/; tylko do przebudowy zbioru.
 
 Użycie:
-    python3 scripts/download_data.py                       # pobierz wszystko
-    python3 scripts/download_data.py --zip ~/Downloads/archive.zip   # użyj już pobranego archiwum
-    python3 scripts/download_data.py --force               # nadpisz istniejące zdjęcia
+    python3 scripts/download_data.py                                  # wszystkie
+    python3 scripts/download_data.py data1 --zip ~/Downloads/archive.zip   # już pobrane archiwum
+    python3 scripts/download_data.py --force                          # dociągnij, nawet gdy zdjęcia już są
 
-Po rozpakowaniu sumy SHA-256 zdjęć są sprawdzane względem data/<nazwa>/SHA256SUMS.
-Konfiguracja zbiorów i logika pobierania: alpr/build/download.py.
+Z dużych archiwów pobierany jest tylko podzbiór z data/<nazwa>/labels.csv; przerwane pobieranie
+wystarczy uruchomić ponownie. Na końcu zdjęcia są sprawdzane z data/<nazwa>/SHA256SUMS.
 """
 
 import argparse
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))  # działa też bez pip install -e .
-
-from alpr.build.download import DATASETS, DOWNLOADS_DIR, download, extract, md5sum, sample_zip, verify
-from alpr.config import DATA_DIR
+from alpr.build.sources import SOURCES
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("datasets", nargs="*", default=list(DATASETS), help="nazwy zbiorów (domyślnie wszystkie)")
-    parser.add_argument("--zip", type=Path, help="lokalne archiwum zamiast pobierania (tylko dla jednego zbioru)")
-    parser.add_argument("--force", action="store_true", help="rozpakuj ponownie, nawet jeśli zdjęcia już są")
+    parser.add_argument("datasets", nargs="*", default=list(SOURCES), help=f"zbiory: {', '.join(SOURCES)}")
+    parser.add_argument("--zip", type=Path, help="lokalne archiwum (tylko dla jednego zbioru)")
+    parser.add_argument("--force", action="store_true", help="pobierz, nawet jeśli zdjęcia już są")
     args = parser.parse_args()
-
+    if unknown := set(args.datasets) - set(SOURCES):
+        parser.error(f"nieznane zbiory: {', '.join(sorted(unknown))}")
     if args.zip and len(args.datasets) != 1:
         parser.error("--zip wymaga podania dokładnie jednego zbioru")
 
     ok = True
     for name in args.datasets:
-        if name not in DATASETS:
-            parser.error(f"nieznany zbiór: {name} (dostępne: {', '.join(DATASETS)})")
-        cfg = DATASETS[name]
-        target = DATA_DIR / name
-        print(f"[{name}] -> {target.relative_to(ROOT)}")
-
-        if (target / "photos").exists() and any((target / "photos").iterdir()) and not args.force:
-            print("  zdjęcia już są (użyj --force, aby nadpisać)")
-        elif "sample" in cfg and not cfg.get("full_download"):
-            sample_zip(cfg, target, args.zip.expanduser() if args.zip else None)
+        source = SOURCES[name]
+        print(f"[{name}] -> {source.dir}")
+        if source.has_photos() and not args.force:
+            print("  zdjęcia już są (--force, aby dociągnąć)")
         else:
-            zip_path = args.zip.expanduser() if args.zip else DOWNLOADS_DIR / f"{name}.zip"
-            if not zip_path.exists():
-                try:
-                    download(cfg["url"], zip_path)
-                except OSError as e:
-                    print(
-                        f"  nie udało się pobrać ({e}). Pobierz ręcznie z {cfg['page']}\n"
-                        f"  i uruchom: python3 scripts/download_data.py {name} --zip <ścieżka>"
-                    )
-                    ok = False
-                    continue
-            if "md5" in cfg and md5sum(zip_path) != cfg["md5"]:
-                print(f"  BŁĄD: archiwum {zip_path} ma złą sumę MD5, usuń je i pobierz ponownie")
+            try:
+                source.fetch(args.zip.expanduser() if args.zip else None)
+            except (OSError, ValueError) as e:
+                print(f"  BŁĄD: {e}\n  pobierz ręcznie z {source.page} i użyj --zip")
                 ok = False
                 continue
-            if "sample" in cfg:
-                sample_zip(cfg, target, zip_path)
-            else:
-                print(f"  rozpakowywanie {zip_path}")
-                extract(zip_path, cfg["members"], target)
-        ok &= verify(target)
+        bad = source.verify()
+        if bad is None:
+            print("  brak SHA256SUMS, pomijam weryfikację")
+        elif bad:
+            print(f"  BŁĄD: {len(bad)} plików brakuje lub ma złą sumę, np. {bad[:5]}")
+            ok = False
+        else:
+            print("  OK: zdjęcia zgodne z SHA256SUMS")
     return 0 if ok else 1
 
 

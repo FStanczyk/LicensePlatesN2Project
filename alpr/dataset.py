@@ -1,13 +1,6 @@
-"""Zbiór data/combined: wczytywanie i filtrowanie plates.csv, kolumny pochodne, format pól.
+"""Zbiór data/combined: wczytywanie plates.csv, format pól. Opis kolumn: README, sekcja "Dane"."""
 
-Przykład:
-    from alpr.dataset import load_plates
-    test = load_plates(sample_type="full_photo", split="test", originals_only=True)
-    ocr = load_plates(split="test", ocr_only=True)        # bez UC3M-LP (zamazane znaki)
-
-Ścieżki w kolumnach image i crop są względne do katalogu zbioru. Opis kolumn: README, sekcja "Dane".
-"""
-
+import csv
 import re
 from pathlib import Path
 
@@ -42,15 +35,12 @@ SPLITS = ["train", "val", "test"]
 
 
 def normalize_text(text: str) -> str:
-    """Wielkie litery, tylko A-Z, 0-9 i '*' (znak zamazany w data2). Tak zapisana jest kolumna text,
-    więc tak samo trzeba normalizować odczyt OCR przed porównaniem."""
+    """Wielkie A-Z, 0-9 i '*' (znak zamazany); tak zapisana jest kolumna text."""
     return re.sub(r"[^A-Z0-9*]", "", text.upper())
 
 
 def exposure(crop: np.ndarray) -> str:
-    """Naświetlenie tablicy mierzone na wycinku: "under", gdy nawet jasne tło jest ciemne (95. percentyl
-    jasności < 100), "over", gdy nawet znaki są jasne (5. percentyl > 100), inaczej "normal".
-    Progi dobrane na data1 i data3 (ok. 3% under, 4% over wśród oryginałów)."""
+    """under: 95. percentyl jasności < 100, over: 5. percentyl > 100, inaczej normal."""
     p5, p95 = np.percentile(cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY), [5, 95])
     return "under" if p95 < 100 else "over" if p5 > 100 else "normal"
 
@@ -62,12 +52,7 @@ def load_plates(
     originals_only: bool = False,
     ocr_only: bool = False,
 ) -> pd.DataFrame:
-    """Wczytuje plates.csv z katalogu zbioru (domyślnie config.default_dataset()) i filtruje wiersze.
-
-    sample_type: "full_photo" (detekcja) albo "plate_crop"; split: train / val / test;
-    originals_only: bez kopii ze sztucznym zniekształceniem; ocr_only: bez tablic z zamazanymi znakami.
-    Dodaje kolumny source (data1 / data2 / data3) i corrupted (original / corrupted).
-    """
+    """plates.csv po filtrach, z kolumnami source i corrupted."""
     df = pd.read_csv(Path(dataset or default_dataset()) / "plates.csv")
     if sample_type:
         df = df[df.sample_type == sample_type]
@@ -81,7 +66,6 @@ def load_plates(
 
 
 def add_derived(df: pd.DataFrame) -> pd.DataFrame:
-    """Kolumny pochodne: source (prefiks plate_id) i corrupted (original / corrupted)."""
     return df.assign(
         source=df.plate_id.str.split("_").str[0],
         corrupted=np.where(df.artificial_corruption == "none", "original", "corrupted"),
@@ -89,23 +73,26 @@ def add_derived(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def parse_polygon(text: str) -> np.ndarray:
-    """Kolumna polygon ("x1 y1 x2 y2 ...") -> narożniki 4x2."""
     return np.array(text.split(), dtype=np.float32).reshape(4, 2)
 
 
 def format_polygon(poly: np.ndarray) -> str:
-    """Narożniki 4x2 -> zapis jak w kolumnie polygon (liczby całkowite rozdzielone spacją)."""
     return " ".join(str(round(v)) for v in poly.flatten())
 
 
 def crop_path(dataset: str | Path, crop: str) -> Path:
-    """Pełna ścieżka wycinka z kolumny crop. Na Kaggle wycinki leżą o poziom głębiej
-    (ocr/ocr/<split>/, tak rozpakował się ocr.zip); lokalnie get_data.py to wyrównuje."""
+    """Ścieżka wycinka; na Kaggle wycinki leżą w ocr/ocr/<split>/."""
     path = Path(dataset) / crop
     nested = Path(dataset) / "ocr" / crop
     return nested if not path.exists() and nested.exists() else path
 
 
 def list_images(folder: Path) -> list[Path]:
-    """Wszystkie zdjęcia w folderze (rekurencyjnie), posortowane."""
     return sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMG_EXTS)
+
+
+def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)

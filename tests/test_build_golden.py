@@ -1,7 +1,6 @@
-"""Powtarzalność budowy zbioru: wyniki przed refaktoryzacją (scripts/build_dataset.py z commita 92285a4).
+"""Powtarzalność zniekształceń i wycinków (wartości z commita 92285a4).
 
-Jeśli któryś test przestanie przechodzić po zmianie kodu albo wersji bibliotek, build_dataset.py
-da inny zbiór niż ten na Kaggle. Trzeba to wtedy świadomie zaakceptować i wypuścić nową wersję zbioru.
+Niezaliczony test oznacza inny zbiór niż na Kaggle: zmiana musi być świadoma i iść z nową wersją zbioru.
 """
 
 import hashlib
@@ -26,7 +25,6 @@ def img():
     return np.random.default_rng(0).integers(0, 256, (120, 200, 3), dtype=np.uint8)
 
 
-# klucz -> (zniekształcenie, siła, hash obrazu); klucze dobrane tak, żeby pokryć wszystkie typy
 GOLDEN = {
     "k0": ("defocus_blur", 2, "fe8c0d82045433bd"),
     "k1": ("contrast", 5, "579f730fe2b463c3"),
