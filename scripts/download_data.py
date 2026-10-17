@@ -54,8 +54,10 @@ def main() -> int:
                 try:
                     download(cfg["url"], zip_path)
                 except OSError as e:
-                    print(f"  nie udało się pobrać ({e}). Pobierz ręcznie z {cfg['page']}\n"
-                          f"  i uruchom: python3 scripts/download_data.py {name} --zip <ścieżka>")
+                    print(
+                        f"  nie udało się pobrać ({e}). Pobierz ręcznie z {cfg['page']}\n"
+                        f"  i uruchom: python3 scripts/download_data.py {name} --zip <ścieżka>"
+                    )
                     ok = False
                     continue
             if "md5" in cfg and md5sum(zip_path) != cfg["md5"]:

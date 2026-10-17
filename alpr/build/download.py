@@ -24,8 +24,7 @@ DOWNLOADS_DIR = DATA_DIR / "_downloads"
 
 DATASETS = {
     "data1": {
-        "url": "https://www.kaggle.com/api/v1/datasets/download/"
-        "piotrstefaskiue/poland-vehicle-license-plate-dataset",
+        "url": "https://www.kaggle.com/api/v1/datasets/download/piotrstefaskiue/poland-vehicle-license-plate-dataset",
         "page": "https://www.kaggle.com/datasets/piotrstefaskiue/poland-vehicle-license-plate-dataset",
         # ścieżka w archiwum -> ścieżka w data/<nazwa>/
         "members": {"photos/photos/": "photos/", "annotations.xml": "annotations.xml"},
@@ -50,8 +49,35 @@ DATASETS = {
             "size": 7000,
             "seed": 0,
             "prefer": ["pl"],
-            "countries": ["at", "be", "bg", "cy", "cz", "de", "dk", "ee", "es", "fi", "fr", "gr", "hr",
-                          "hu", "ie", "it", "lt", "lu", "lv", "mt", "nl", "pl", "pt", "ro", "se", "si", "sk"],
+            "countries": [
+                "at",
+                "be",
+                "bg",
+                "cy",
+                "cz",
+                "de",
+                "dk",
+                "ee",
+                "es",
+                "fi",
+                "fr",
+                "gr",
+                "hr",
+                "hu",
+                "ie",
+                "it",
+                "lt",
+                "lu",
+                "lv",
+                "mt",
+                "nl",
+                "pl",
+                "pt",
+                "ro",
+                "se",
+                "si",
+                "sk",
+            ],
         },
     },
 }
@@ -112,7 +138,7 @@ def extract(zip_path: Path, members: dict[str, str], target: Path) -> None:
                 continue
             for src, dst in members.items():
                 if info.filename == src or (src.endswith("/") and info.filename.startswith(src)):
-                    rel = dst + info.filename[len(src):] if src.endswith("/") else dst
+                    rel = dst + info.filename[len(src) :] if src.endswith("/") else dst
                     out = target / rel
                     out.parent.mkdir(parents=True, exist_ok=True)
                     with zf.open(info) as f, open(out, "wb") as o:
@@ -131,7 +157,7 @@ def range_get(url: str, start: int, end: int) -> bytes:
             if attempt == 4:
                 raise
             retry_after = getattr(e, "headers", None) and e.headers.get("Retry-After")
-            wait = int(retry_after) if retry_after and retry_after.isdigit() else 2 ** attempt
+            wait = int(retry_after) if retry_after and retry_after.isdigit() else 2**attempt
             time.sleep(min(wait, 120))
 
 
@@ -237,7 +263,7 @@ def sample_zip(cfg: dict, target: Path, zip_path: Path | None) -> None:
             print(f"\r  pobrano {done[0]}/{len(todo)}", end="", flush=True)
 
     infos = [src.zf.getinfo(r["member"]) for r in todo]
-    for row, data in zip(todo, src.read_many(infos, progress)):
+    for row, data in zip(todo, src.read_many(infos, progress), strict=True):
         out = target / "photos" / row["file"]
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(data)

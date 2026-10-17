@@ -26,11 +26,17 @@ from alpr.detection.yolo import resolved_yaml
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data", type=Path, default=default_dataset() / "detection" / "data.yaml",
-                        help="plik data.yaml zbioru detekcji")
+    parser.add_argument(
+        "--data",
+        type=Path,
+        default=default_dataset() / "detection" / "data.yaml",
+        help="plik data.yaml zbioru detekcji",
+    )
     parser.add_argument("--model", default="yolo11n.pt", help="wagi startowe (yolo11n.pt, yolo11s.pt, yolov8n.pt, ...)")
     parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--imgsz", type=int, default=640, help="rozmiar wejścia; tablice są małe, warto sprawdzić też 960")
+    parser.add_argument(
+        "--imgsz", type=int, default=640, help="rozmiar wejścia; tablice są małe, warto sprawdzić też 960"
+    )
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--patience", type=int, default=20, help="wczesne zatrzymanie po tylu epokach bez poprawy")
     parser.add_argument("--fraction", type=float, default=1.0, help="ułamek zbioru train (do szybkich testów)")
@@ -48,10 +54,19 @@ def main() -> int:
     data = resolved_yaml(args.data, args.project)
     model = YOLO(args.model)
     model.train(
-        data=str(data), epochs=args.epochs, imgsz=args.imgsz, batch=args.batch, patience=args.patience,
-        fraction=args.fraction, device=args.device, workers=args.workers,
-        project=str(args.project.resolve()), name=args.name, exist_ok=True,
-        seed=SEED, deterministic=True,
+        data=str(data),
+        epochs=args.epochs,
+        imgsz=args.imgsz,
+        batch=args.batch,
+        patience=args.patience,
+        fraction=args.fraction,
+        device=args.device,
+        workers=args.workers,
+        project=str(args.project.resolve()),
+        name=args.name,
+        exist_ok=True,
+        seed=SEED,
+        deterministic=True,
     )
     best = args.project.resolve() / args.name / "weights" / "best.pt"
     print(f"Najlepsze wagi: {best}")

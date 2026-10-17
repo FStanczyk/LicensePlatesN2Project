@@ -4,7 +4,6 @@ import pytest
 
 from alpr.detection.metrics import average_precision, best_matching_box, corner_error, evaluate, image_groups, match
 
-
 # Wartości jak w ultralytics (interpolacja liniowa w 101 punktach z punktem końcowym recall 1,
 # precision 0): idealna detekcja daje 0.995, a przy niepełnym recall AP jest nieco zawyżone.
 # Dzięki temu liczby są porównywalne z metrykami z treningu (model.val()).
@@ -33,14 +32,46 @@ def test_match_zachlanny_kazda_tablica_raz():
 
 
 def make_gt():
-    return pd.DataFrame([
-        {"plate_id": "data1_a_0", "image": "a.jpg", "x1": 0, "y1": 0, "x2": 100, "y2": 30,
-         "lighting": "day", "exposure": "normal", "artificial_corruption": "none", "artificial_severity": 0},
-        {"plate_id": "data2_b_0", "image": "b.jpg", "x1": 50, "y1": 50, "x2": 150, "y2": 80,
-         "lighting": "night", "exposure": "under", "artificial_corruption": "fog", "artificial_severity": 3},
-        {"plate_id": "data2_b_1", "image": "b.jpg", "x1": 200, "y1": 50, "x2": 300, "y2": 80,
-         "lighting": "night", "exposure": "normal", "artificial_corruption": "fog", "artificial_severity": 3},
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "plate_id": "data1_a_0",
+                "image": "a.jpg",
+                "x1": 0,
+                "y1": 0,
+                "x2": 100,
+                "y2": 30,
+                "lighting": "day",
+                "exposure": "normal",
+                "artificial_corruption": "none",
+                "artificial_severity": 0,
+            },
+            {
+                "plate_id": "data2_b_0",
+                "image": "b.jpg",
+                "x1": 50,
+                "y1": 50,
+                "x2": 150,
+                "y2": 80,
+                "lighting": "night",
+                "exposure": "under",
+                "artificial_corruption": "fog",
+                "artificial_severity": 3,
+            },
+            {
+                "plate_id": "data2_b_1",
+                "image": "b.jpg",
+                "x1": 200,
+                "y1": 50,
+                "x2": 300,
+                "y2": 80,
+                "lighting": "night",
+                "exposure": "normal",
+                "artificial_corruption": "fog",
+                "artificial_severity": 3,
+            },
+        ]
+    )
 
 
 def test_evaluate_idealne_predykcje():
@@ -57,7 +88,7 @@ def test_evaluate_brak_predykcji_i_prog_pewnosci():
     gt = make_gt()
     preds = pd.DataFrame([{"image": "a.jpg", "conf": 0.1, "x1": 0, "y1": 0, "x2": 100, "y2": 30}])
     metrics, plates = evaluate(gt, preds, 0.25)
-    assert metrics["R"] == 0.0                          # jedyna predykcja poniżej progu
+    assert metrics["R"] == 0.0  # jedyna predykcja poniżej progu
     # ale liczy się do AP (1 z 3 tablic wykryta, bez fałszywych alarmów)
     assert metrics["AP50"] == pytest.approx(average_precision(np.array([True]), np.array([0.1]), 3))
     assert plates.detected.tolist() == [0, 0, 0]

@@ -39,12 +39,15 @@ def test_warp_zdegenerowany_czworokat_daje_co_najmniej_1_piksel():
     assert warp(img, np.zeros((4, 2), np.float32)).shape[:2] == (1, 1)
 
 
-@pytest.mark.parametrize(("a", "b", "iou"), [
-    ([0, 0, 10, 10], [0, 0, 10, 10], 1.0),
-    ([0, 0, 10, 10], [5, 0, 15, 10], 50 / 150),
-    ([0, 0, 10, 10], [20, 20, 30, 30], 0.0),
-    ([0, 0, 0, 0], [0, 0, 0, 0], 0.0),
-])
+@pytest.mark.parametrize(
+    ("a", "b", "iou"),
+    [
+        ([0, 0, 10, 10], [0, 0, 10, 10], 1.0),
+        ([0, 0, 10, 10], [5, 0, 15, 10], 50 / 150),
+        ([0, 0, 10, 10], [20, 20, 30, 30], 0.0),
+        ([0, 0, 0, 0], [0, 0, 0, 0], 0.0),
+    ],
+)
 def test_box_iou(a, b, iou):
     assert box_iou(np.array(a, float), np.array(b, float)) == pytest.approx(iou)
 

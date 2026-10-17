@@ -16,18 +16,20 @@ def select_uc3m(src, opts: dict) -> tuple[list[dict], dict[str, bytes]]:
             split_of[stem] = split
     infos = [i for i in src.zf.infolist() if i.filename.endswith(".json")]
     images = []
-    for info, raw in zip(infos, src.read_many(infos)):
+    for info, raw in zip(infos, src.read_many(infos), strict=True):
         split, name = info.filename.split("/")[1:]
         stem = name[: -len(".json")]
         lps = json.loads(raw)["lps"]
-        images.append({
-            "file": f"{stem}.jpg",
-            "member": f"UC3M-LP/{split}/{stem}.jpg",
-            "split": split_of[stem],
-            "plates": len(lps),
-            "night": sum(lp["lp_id"][1] == "N" for lp in lps),
-            "_ann": raw,
-        })
+        images.append(
+            {
+                "file": f"{stem}.jpg",
+                "member": f"UC3M-LP/{split}/{stem}.jpg",
+                "split": split_of[stem],
+                "plates": len(lps),
+                "night": sum(lp["lp_id"][1] == "N" for lp in lps),
+                "_ann": raw,
+            }
+        )
     night = [r for r in images if r["night"]]
     day = [r for r in images if not r["night"]]
     random.Random(opts["seed"]).shuffle(day)
@@ -37,8 +39,10 @@ def select_uc3m(src, opts: dict) -> tuple[list[dict], dict[str, bytes]]:
             break
         chosen.append(r)
         total += r["plates"]
-    print(f"  {len(images)} zdjęć w archiwum, wybrano {len(chosen)} ({total} tablic, "
-          f"{sum(r['night'] for r in chosen)} nocnych)")
+    print(
+        f"  {len(images)} zdjęć w archiwum, wybrano {len(chosen)} ({total} tablic, "
+        f"{sum(r['night'] for r in chosen)} nocnych)"
+    )
     extra = {f"annotations/{r['file'][:-4]}.json": r.pop("_ann") for r in chosen}
     return sorted(chosen, key=lambda r: r["file"]), extra
 
@@ -55,13 +59,15 @@ def select_autoria(src, opts: dict) -> tuple[list[dict], dict[str, bytes]]:
         stem = parts[3][: -len(".json")]
         country = ann.get("country", "")
         if country in opts["countries"]:
-            by_country.setdefault(country, []).append({
-                "file": f"{parts[1]}/{stem}.png",
-                "member": f"{prefix}/{parts[1]}/img/{stem}.png",
-                "text": ann["description"],
-                "country": country,
-                "lines": ann.get("count_lines", ""),
-            })
+            by_country.setdefault(country, []).append(
+                {
+                    "file": f"{parts[1]}/{stem}.png",
+                    "member": f"{prefix}/{parts[1]}/img/{stem}.png",
+                    "text": ann["description"],
+                    "country": country,
+                    "lines": ann.get("count_lines", ""),
+                }
+            )
     chosen = [r for c in opts["prefer"] for r in by_country.pop(c, [])]
     rng = random.Random(opts["seed"])
     queues = [by_country[c] for c in sorted(by_country)]

@@ -11,10 +11,10 @@ import numpy as np
 
 from alpr.geometry import box_corners, box_iou, order_corners, warp
 
-MARGIN = 0.15          # margines wokół ramki przy szukaniu narożników (ułamek szerokości/wysokości)
-WORK_WIDTH = 320       # szerokość, do której skalujemy wycinek przed szukaniem narożników
-MIN_IOU = 0.6          # minimalne IoU ramki znalezionego czworokąta z ramką z YOLO
-ASPECT = (1.0, 7.0)    # dopuszczalny stosunek szerokości do wysokości tablicy (2 wiersze ok. 1.5, 1 wiersz ok. 4.7)
+MARGIN = 0.15  # margines wokół ramki przy szukaniu narożników (ułamek szerokości/wysokości)
+WORK_WIDTH = 320  # szerokość, do której skalujemy wycinek przed szukaniem narożników
+MIN_IOU = 0.6  # minimalne IoU ramki znalezionego czworokąta z ramką z YOLO
+ASPECT = (1.0, 7.0)  # dopuszczalny stosunek szerokości do wysokości tablicy (2 wiersze ok. 1.5, 1 wiersz ok. 4.7)
 
 
 def _masks(bgr: np.ndarray) -> list[tuple[str, np.ndarray]]:
@@ -42,7 +42,7 @@ def refine_quad(quad: np.ndarray, points: np.ndarray) -> np.ndarray:
         length = np.linalg.norm(side)
         if length < 4:
             return quad
-        t = (points - a) @ side / length ** 2                  # położenie wzdłuż boku (0..1)
+        t = (points - a) @ side / length**2  # położenie wzdłuż boku (0..1)
         rel = points - a
         dist = np.abs(side[0] * rel[:, 1] - side[1] * rel[:, 0]) / length  # odległość od boku
         near = points[(t > 0.15) & (t < 0.85) & (dist < max(2.0, 0.05 * length))]
@@ -52,7 +52,7 @@ def refine_quad(quad: np.ndarray, points: np.ndarray) -> np.ndarray:
         lines.append((np.array([x0, y0]), np.array([vx, vy])))
     refined = []
     for i in range(4):
-        (p1, d1), (p2, d2) = lines[i - 1], lines[i]            # narożnik i leży między bokami i-1 oraz i
+        (p1, d1), (p2, d2) = lines[i - 1], lines[i]  # narożnik i leży między bokami i-1 oraz i
         det = d1[0] * -d2[1] + d2[0] * d1[1]
         if abs(det) < 1e-6:
             return quad

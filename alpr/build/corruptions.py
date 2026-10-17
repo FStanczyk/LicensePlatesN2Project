@@ -20,13 +20,23 @@ from imagecorruptions import corrupt, corruptions  # noqa: E402
 
 _gaussian = skimage.filters.gaussian
 corruptions.gaussian = lambda img, sigma=1, multichannel=None, **kw: _gaussian(
-    img, sigma=sigma, channel_axis=-1 if multichannel else None, **kw)
+    img, sigma=sigma, channel_axis=-1 if multichannel else None, **kw
+)
 warnings.filterwarnings("ignore", module="imagecorruptions")
 
 # z imagecorruptions, plus "darken" (brak w pakiecie: brightness tylko rozjaśnia);
 # pomijamy przekształcenia geometryczne (elastic_transform, zoom_blur), bo przesuwają tablicę
-CORRUPTIONS = ["brightness", "darken", "contrast", "fog", "gaussian_noise", "shot_noise",
-               "motion_blur", "defocus_blur", "jpeg_compression"]
+CORRUPTIONS = [
+    "brightness",
+    "darken",
+    "contrast",
+    "fog",
+    "gaussian_noise",
+    "shot_noise",
+    "motion_blur",
+    "defocus_blur",
+    "jpeg_compression",
+]
 
 
 def darken(img: np.ndarray, severity: int) -> np.ndarray:

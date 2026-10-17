@@ -12,13 +12,14 @@ import yaml
 
 @dataclass
 class Detection:
-    box: np.ndarray    # x1, y1, x2, y2 w pikselach
+    box: np.ndarray  # x1, y1, x2, y2 w pikselach
     conf: float
 
 
 def load_model(weights: str | Path):
     """Ładuje model YOLO z pliku wag (best.pt z train_yolo.py albo np. yolo11n.pt)."""
     from ultralytics import YOLO
+
     return YOLO(str(weights))
 
 

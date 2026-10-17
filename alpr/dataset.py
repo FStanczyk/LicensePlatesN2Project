@@ -17,10 +17,27 @@ import pandas as pd
 
 from alpr.config import IMG_EXTS, default_dataset
 
-FIELDS = ["plate_id", "sample_type", "split",
-          "text", "text_raw", "blurred", "country", "lighting", "exposure", "lines",
-          "artificial_corruption", "artificial_severity",
-          "image", "x1", "y1", "x2", "y2", "polygon", "crop"]
+FIELDS = [
+    "plate_id",
+    "sample_type",
+    "split",
+    "text",
+    "text_raw",
+    "blurred",
+    "country",
+    "lighting",
+    "exposure",
+    "lines",
+    "artificial_corruption",
+    "artificial_severity",
+    "image",
+    "x1",
+    "y1",
+    "x2",
+    "y2",
+    "polygon",
+    "crop",
+]
 SPLITS = ["train", "val", "test"]
 
 
@@ -38,8 +55,13 @@ def exposure(crop: np.ndarray) -> str:
     return "under" if p95 < 100 else "over" if p5 > 100 else "normal"
 
 
-def load_plates(dataset: str | Path | None = None, sample_type: str | None = None, split: str | None = None,
-                originals_only: bool = False, ocr_only: bool = False) -> pd.DataFrame:
+def load_plates(
+    dataset: str | Path | None = None,
+    sample_type: str | None = None,
+    split: str | None = None,
+    originals_only: bool = False,
+    ocr_only: bool = False,
+) -> pd.DataFrame:
     """Wczytuje plates.csv z katalogu zbioru (domyślnie config.default_dataset()) i filtruje wiersze.
 
     sample_type: "full_photo" (detekcja) albo "plate_crop"; split: train / val / test;
@@ -60,8 +82,10 @@ def load_plates(dataset: str | Path | None = None, sample_type: str | None = Non
 
 def add_derived(df: pd.DataFrame) -> pd.DataFrame:
     """Kolumny pochodne: source (prefiks plate_id) i corrupted (original / corrupted)."""
-    return df.assign(source=df.plate_id.str.split("_").str[0],
-                     corrupted=np.where(df.artificial_corruption == "none", "original", "corrupted"))
+    return df.assign(
+        source=df.plate_id.str.split("_").str[0],
+        corrupted=np.where(df.artificial_corruption == "none", "original", "corrupted"),
+    )
 
 
 def parse_polygon(text: str) -> np.ndarray:

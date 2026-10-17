@@ -25,14 +25,24 @@ def test_exposure():
 @pytest.fixture
 def dataset(tmp_path):
     rows = []
-    for i, (kind, split, corr, blurred) in enumerate([
-        ("full_photo", "train", "none", 0), ("full_photo", "test", "none", 1),
-        ("full_photo", "test", "fog", 1), ("plate_crop", "test", "none", 0),
-    ]):
-        rows.append({f: "" for f in FIELDS} | {
-            "plate_id": f"data{1 + i % 3}_{i}", "sample_type": kind, "split": split,
-            "artificial_corruption": corr, "blurred": blurred,
-        })
+    for i, (kind, split, corr, blurred) in enumerate(
+        [
+            ("full_photo", "train", "none", 0),
+            ("full_photo", "test", "none", 1),
+            ("full_photo", "test", "fog", 1),
+            ("plate_crop", "test", "none", 0),
+        ]
+    ):
+        rows.append(
+            {f: "" for f in FIELDS}
+            | {
+                "plate_id": f"data{1 + i % 3}_{i}",
+                "sample_type": kind,
+                "split": split,
+                "artificial_corruption": corr,
+                "blurred": blurred,
+            }
+        )
     pd.DataFrame(rows, columns=FIELDS).to_csv(tmp_path / "plates.csv", index=False)
     return tmp_path
 

@@ -49,8 +49,12 @@ def main() -> int:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--images", type=Path, help="folder ze zdjęciami (przeszukiwany rekurencyjnie)")
     source.add_argument("--split", choices=SPLITS, help="całe zdjęcia z plates.csv")
-    parser.add_argument("--dataset", type=Path, default=default_dataset(), help="z --split: katalog zbioru (z plates.csv)")
-    parser.add_argument("--originals-only", action="store_true", help="z --split: pomiń kopie ze sztucznym zniekształceniem")
+    parser.add_argument(
+        "--dataset", type=Path, default=default_dataset(), help="z --split: katalog zbioru (z plates.csv)"
+    )
+    parser.add_argument(
+        "--originals-only", action="store_true", help="z --split: pomiń kopie ze sztucznym zniekształceniem"
+    )
     parser.add_argument("--conf", type=float, default=0.25, help="próg pewności detekcji")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--no-align", action="store_true", help="nie prostuj, zapisz zwykły wycinek ramki")
@@ -93,11 +97,20 @@ def main() -> int:
             crop_rel = crop_name(rel, k, common)
             cv2.imwrite(str(out / crop_rel), crop)
             x1, y1, x2, y2 = det.box
-            rows.append({
-                "image": rel, "det_id": k, "conf": round(det.conf, 4),
-                "x1": round(x1), "y1": round(y1), "x2": round(x2), "y2": round(y2),
-                "polygon": format_polygon(poly), "align": method, "crop": crop_rel,
-            })
+            rows.append(
+                {
+                    "image": rel,
+                    "det_id": k,
+                    "conf": round(det.conf, 4),
+                    "x1": round(x1),
+                    "y1": round(y1),
+                    "x2": round(x2),
+                    "y2": round(y2),
+                    "polygon": format_polygon(poly),
+                    "align": method,
+                    "crop": crop_rel,
+                }
+            )
         if i % 100 == 0:
             print(f"  {i}/{len(images)}")
 

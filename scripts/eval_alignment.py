@@ -82,13 +82,20 @@ def main() -> int:
                 if box is None:
                     continue  # tablica niewykryta: to błąd detekcji, liczony w eval_detection.py
             aligned, poly, method = align_plate(img, box)
-            rows.append({
-                "plate_id": r.plate_id, "source": r.source, "lighting": r.lighting,
-                "exposure": r.exposure, "corrupted": r.corrupted,
-                "iou_box": polygon_iou(box_corners(box), gt), "iou_aligned": polygon_iou(poly, gt),
-                "err_box": corner_error(box_corners(box), gt), "err_aligned": corner_error(poly, gt),
-                "method": method,
-            })
+            rows.append(
+                {
+                    "plate_id": r.plate_id,
+                    "source": r.source,
+                    "lighting": r.lighting,
+                    "exposure": r.exposure,
+                    "corrupted": r.corrupted,
+                    "iou_box": polygon_iou(box_corners(box), gt),
+                    "iou_aligned": polygon_iou(poly, gt),
+                    "err_box": corner_error(box_corners(box), gt),
+                    "err_aligned": corner_error(poly, gt),
+                    "method": method,
+                }
+            )
             if saved < args.examples:
                 cv2.imwrite(str(out / "examples" / f"{r.plate_id}.png"), example(img, box, aligned, gt))
                 saved += 1
@@ -105,7 +112,9 @@ def main() -> int:
     long = pd.concat(parts)
     summary = long.groupby(["group", "value"], sort=False)[metrics].mean()
     summary.insert(0, "plates", long.groupby(["group", "value"], sort=False).size())
-    summary["better"] = long.assign(b=long.iou_aligned > long.iou_box + 0.01).groupby(["group", "value"], sort=False).b.mean()
+    summary["better"] = (
+        long.assign(b=long.iou_aligned > long.iou_box + 0.01).groupby(["group", "value"], sort=False).b.mean()
+    )
     summary.reset_index().to_csv(out / "summary.csv", index=False, float_format="%.4f")
     with pd.option_context("display.width", 200):
         print(summary.to_string(float_format=lambda v: f"{v:.3f}"))

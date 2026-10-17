@@ -20,7 +20,7 @@ def test_align_plate_znajduje_czworokat():
     aligned, poly, method = align_plate(scene(), BOX)
     assert method == "quad"
     assert corner_error(poly, PLATE) < 0.1
-    assert aligned.shape[1] > 3 * aligned.shape[0]       # tablica jednorzędowa: szeroka
+    assert aligned.shape[1] > 3 * aligned.shape[0]  # tablica jednorzędowa: szeroka
 
 
 def test_align_plate_bez_tablicy_zostaje_ramka():

@@ -57,8 +57,12 @@ def main() -> int:
     parser.add_argument("--preds", type=Path, help="gotowy predictions.csv (pomija uruchamianie modelu)")
     parser.add_argument("--dataset", type=Path, default=default_dataset(), help="katalog zbioru (z plates.csv)")
     parser.add_argument("--split", default="test", choices=SPLITS)
-    parser.add_argument("--images-root", type=Path, default=None,
-                        help="katalog z obrazami o tych samych ścieżkach względnych co zbiór (np. po filtrze)")
+    parser.add_argument(
+        "--images-root",
+        type=Path,
+        default=None,
+        help="katalog z obrazami o tych samych ścieżkach względnych co zbiór (np. po filtrze)",
+    )
     parser.add_argument("--conf", type=float, default=0.25, help="próg pewności dla P/R/F1")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--name", default="baseline")

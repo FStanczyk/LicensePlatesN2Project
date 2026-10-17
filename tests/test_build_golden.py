@@ -43,8 +43,17 @@ GOLDEN = {
 
 def test_seed_i_lista_znieksztalcen():
     assert SEED == 0
-    assert CORRUPTIONS == ["brightness", "darken", "contrast", "fog", "gaussian_noise", "shot_noise",
-                           "motion_blur", "defocus_blur", "jpeg_compression"]
+    assert CORRUPTIONS == [
+        "brightness",
+        "darken",
+        "contrast",
+        "fog",
+        "gaussian_noise",
+        "shot_noise",
+        "motion_blur",
+        "defocus_blur",
+        "jpeg_compression",
+    ]
 
 
 @pytest.mark.parametrize("key", GOLDEN)
@@ -61,7 +70,12 @@ def test_obraz_po_znieksztalceniu(img, key):
 
 def test_darken(img):
     assert [digest(darken(img, s)) for s in range(1, 6)] == [
-        "1438cbd8d7696f1d", "cf7daae76701d634", "d0308fddd821c03f", "4d4d968532e3e5dc", "5590da603ef71a69"]
+        "1438cbd8d7696f1d",
+        "cf7daae76701d634",
+        "d0308fddd821c03f",
+        "4d4d968532e3e5dc",
+        "5590da603ef71a69",
+    ]
 
 
 def test_warp(img):

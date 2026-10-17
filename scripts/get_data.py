@@ -39,7 +39,9 @@ def check(dest: Path) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dest", type=Path, default=COMBINED, help=f"katalog docelowy (domyślnie {COMBINED.relative_to(ROOT)})")
+    parser.add_argument(
+        "--dest", type=Path, default=COMBINED, help=f"katalog docelowy (domyślnie {COMBINED.relative_to(ROOT)})"
+    )
     parser.add_argument("--force", action="store_true", help="usuń i pobierz ponownie")
     args = parser.parse_args()
     dest = args.dest.expanduser().resolve()

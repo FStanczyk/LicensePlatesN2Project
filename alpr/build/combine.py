@@ -52,8 +52,11 @@ def add_photo(out: Path, rows: list, source: str, stem: str, split: str, img: np
 
     for variant, image, fields in (
         (name, img, {"artificial_corruption": "none", "artificial_severity": 0}),
-        (f"{name}_{corruption}{severity}", corrupted,
-         {"artificial_corruption": corruption, "artificial_severity": severity}),
+        (
+            f"{name}_{corruption}{severity}",
+            corrupted,
+            {"artificial_corruption": corruption, "artificial_severity": severity},
+        ),
     ):
         image_rel = f"detection/images/{split}/{variant}.jpg"
         (out / image_rel).parent.mkdir(parents=True, exist_ok=True)
@@ -67,14 +70,23 @@ def add_photo(out: Path, rows: list, source: str, stem: str, split: str, img: np
             (out / crop_rel).parent.mkdir(parents=True, exist_ok=True)
             crop = warp(image, poly)
             cv2.imwrite(str(out / crop_rel), crop)
-            rows.append({
-                "plate_id": f"{variant}_{k}", "sample_type": "full_photo", "split": split,
-                "image": image_rel,
-                "x1": round(x1), "y1": round(y1), "x2": round(x2), "y2": round(y2),
-                "polygon": format_polygon(poly), "crop": crop_rel,
-                "exposure": exposure(crop),
-                **fields, **plate,
-            })
+            rows.append(
+                {
+                    "plate_id": f"{variant}_{k}",
+                    "sample_type": "full_photo",
+                    "split": split,
+                    "image": image_rel,
+                    "x1": round(x1),
+                    "y1": round(y1),
+                    "x2": round(x2),
+                    "y2": round(y2),
+                    "polygon": format_polygon(poly),
+                    "crop": crop_rel,
+                    "exposure": exposure(crop),
+                    **fields,
+                    **plate,
+                }
+            )
         label = out / f"detection/labels/{split}/{variant}.txt"
         label.parent.mkdir(parents=True, exist_ok=True)
         label.write_text("\n".join(yolo) + "\n")
@@ -89,11 +101,17 @@ def build_data1(src: Path, out: Path, rows: list) -> None:
         for box in image.iter("box"):
             x1, y1, x2, y2 = (float(box.get(k)) for k in ("xtl", "ytl", "xbr", "ybr"))
             raw = box.findtext("attribute[@name='plate number']", "")
-            plates.append({
-                "poly": np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]),
-                "text": normalize_text(raw), "text_raw": raw, "blurred": 0,
-                "country": "pl", "lighting": "unknown", "lines": 1,
-            })
+            plates.append(
+                {
+                    "poly": np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]),
+                    "text": normalize_text(raw),
+                    "text_raw": raw,
+                    "blurred": 0,
+                    "country": "pl",
+                    "lighting": "unknown",
+                    "lines": 1,
+                }
+            )
         add_photo(out, rows, "data1", Path(image.get("name")).stem, split_for(rng, 0.15, 0.15), img, plates)
 
 
@@ -109,12 +127,17 @@ def build_data2(src: Path, out: Path, rows: list) -> None:
         plates = []
         for lp in json.loads((src / "annotations" / f"{stem}.json").read_text())["lps"]:
             code, raw = lp["lp_id"].split("-", 1)  # np. "AN-61*7*DX": typ A, noc N
-            plates.append({
-                "poly": four_corners(np.array(lp["poly_coord"], dtype=float)),
-                "text": normalize_text(raw), "text_raw": lp["lp_id"], "blurred": int("*" in raw),
-                "country": "es", "lighting": {"D": "day", "N": "night"}[code[1]],
-                "lines": 2 if code[0] == "B" else 1,
-            })
+            plates.append(
+                {
+                    "poly": four_corners(np.array(lp["poly_coord"], dtype=float)),
+                    "text": normalize_text(raw),
+                    "text_raw": lp["lp_id"],
+                    "blurred": int("*" in raw),
+                    "country": "es",
+                    "lighting": {"D": "day", "N": "night"}[code[1]],
+                    "lines": 2 if code[0] == "B" else 1,
+                }
+            )
         add_photo(out, rows, "data2", stem, split, img, plates)
 
 
@@ -129,14 +152,22 @@ def build_data3(src: Path, out: Path, rows: list) -> None:
         img = cv2.imread(str(src / "photos" / plate["file"]))  # PNG z kanałem alfa -> 3 kanały BGR
         corrupted, corruption, severity = add_corruption(img, stem)
         common = {
-            "sample_type": "plate_crop", "split": split,
-            "text": normalize_text(plate["text"]), "text_raw": plate["text"], "blurred": 0,
-            "country": plate["country"], "lighting": "unknown", "lines": plate["lines"] or 1,
+            "sample_type": "plate_crop",
+            "split": split,
+            "text": normalize_text(plate["text"]),
+            "text_raw": plate["text"],
+            "blurred": 0,
+            "country": plate["country"],
+            "lighting": "unknown",
+            "lines": plate["lines"] or 1,
         }
         for plate_id, image, fields in (
             (stem, img, {"artificial_corruption": "none", "artificial_severity": 0}),
-            (f"{stem}_{corruption}{severity}", corrupted,
-             {"artificial_corruption": corruption, "artificial_severity": severity}),
+            (
+                f"{stem}_{corruption}{severity}",
+                corrupted,
+                {"artificial_corruption": corruption, "artificial_severity": severity},
+            ),
         ):
             crop_rel = f"ocr/{split}/{plate_id}.png"
             (out / crop_rel).parent.mkdir(parents=True, exist_ok=True)

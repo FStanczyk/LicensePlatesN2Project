@@ -26,6 +26,7 @@ def none(img: np.ndarray) -> np.ndarray:
 def _todo(name: str) -> Method:
     def method(img: np.ndarray, **params) -> np.ndarray:
         raise NotImplementedError(f"metoda {name!r} nie jest jeszcze zaimplementowana (alpr/preprocessing)")
+
     method.__name__ = name
     return method
 

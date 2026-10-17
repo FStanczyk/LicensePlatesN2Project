@@ -65,8 +65,15 @@ def evaluate(gt: pd.DataFrame, preds: pd.DataFrame, conf: float) -> tuple[dict, 
         _, owner = match(pb[keep], boxes, 0.5)
         for (_, row), o, box in zip(g.iterrows(), owner, boxes, strict=True):
             best = max((box_iou(b, box) for b in pb[keep]), default=0.0)
-            plates.append({"plate_id": row.plate_id, "image": image, "detected": int(o >= 0),
-                           "iou": round(best, 3), "conf": round(pc[keep][o], 3) if o >= 0 else ""})
+            plates.append(
+                {
+                    "plate_id": row.plate_id,
+                    "image": image,
+                    "detected": int(o >= 0),
+                    "iou": round(best, 3),
+                    "conf": round(pc[keep][o], 3) if o >= 0 else "",
+                }
+            )
     conf_all = np.concatenate(confs) if confs else np.zeros(0)
     n_gt = len(gt)
     aps = [average_precision(np.concatenate(tps[t]), conf_all, n_gt) for t in IOU_THRESHOLDS]
@@ -74,8 +81,15 @@ def evaluate(gt: pd.DataFrame, preds: pd.DataFrame, conf: float) -> tuple[dict, 
     p = tp50.sum() / len(tp50) if len(tp50) else 0.0
     r = tp50.sum() / n_gt if n_gt else float("nan")
     f1 = 2 * p * r / (p + r) if p + r > 0 else 0.0
-    metrics = {"images": gt.image.nunique(), "plates": n_gt, "P": p, "R": r, "F1": f1,
-               "AP50": aps[0], "AP50_95": float(np.mean(aps))}
+    metrics = {
+        "images": gt.image.nunique(),
+        "plates": n_gt,
+        "P": p,
+        "R": r,
+        "F1": f1,
+        "AP50": aps[0],
+        "AP50_95": float(np.mean(aps)),
+    }
     return metrics, pd.DataFrame(plates)
 
 
