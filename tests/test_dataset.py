@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from alpr.dataset import FIELDS, exposure, format_polygon, load_plates, normalize_text, parse_polygon
+from alpr.dataset import FIELDS, crop_path, exposure, format_polygon, load_plates, normalize_text, parse_polygon
 
 
 @pytest.mark.parametrize(("raw", "text"), [("wa 123-45", "WA12345"), ("61*7*dx", "61*7*DX"), ("ÄB 1", "B1"), ("", "")])
@@ -58,3 +58,13 @@ def test_load_plates_kolumny_pochodne(dataset):
     df = load_plates(dataset)
     assert df.source.tolist() == ["data1", "data2", "data3", "data1"]
     assert df.corrupted.tolist() == ["original", "original", "corrupted", "original"]
+
+
+def test_crop_path_lokalnie_i_na_kaggle(tmp_path):
+    (tmp_path / "ocr" / "test").mkdir(parents=True)
+    (tmp_path / "ocr" / "test" / "a.png").touch()
+    assert crop_path(tmp_path, "ocr/test/a.png") == tmp_path / "ocr" / "test" / "a.png"
+    kaggle = tmp_path / "kaggle"
+    (kaggle / "ocr" / "ocr" / "test").mkdir(parents=True)
+    (kaggle / "ocr" / "ocr" / "test" / "a.png").touch()
+    assert crop_path(kaggle, "ocr/test/a.png") == kaggle / "ocr" / "ocr" / "test" / "a.png"

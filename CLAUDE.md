@@ -15,13 +15,16 @@ Potok docelowy: folder zdjęć -> przetwarzanie -> detekcja i wyrównanie -> OCR
 
 ## Struktura
 
-* `scripts/download_data.py`: pobiera zbiory źródłowe do `data/data1..3/photos/` (tylko gdy trzeba przebudować zbiór).
-* `scripts/build_dataset.py`: składa `data/combined/` (plates.csv, YOLO, wycinki OCR, sztuczne zniekształcenia).
-* `scripts/get_data.py`: pobiera gotowy zbiór z Kaggle do `data/combined/`. **Zwykle wystarczy tylko to.**
+* `alpr/`: pakiet z całą logiką (`pip install -e .`), opis modułów w README, sekcja "Struktura kodu":
+  `config` (ścieżki, `SEED`), `dataset` (`load_plates`, `crop_path`, `normalize_text`), `geometry` (`warp`, IoU),
+  `build/` (budowa zbioru), `preprocessing/` i `ocr/` (szkielety), `detection/` (YOLO, `align_plate`, metryki).
+* `scripts/`: cienkie CLI wywołujące `alpr`:
+  * `get_data.py`: pobiera gotowy zbiór z Kaggle do `data/combined/`. **Zwykle wystarczy tylko to.**
+  * `download_data.py`, `build_dataset.py`: tylko do przebudowy zbioru (źródła w `data/data1..3/photos/`).
+  * `train_yolo.py`, `eval_detection.py`, `eval_alignment.py`, `detect_plates.py`: detekcja
+    (opis w README, sekcja "Detekcja tablic"); `notebooks/detekcja_kaggle.ipynb` uruchamia je na GPU.
 * `scripts/combined_template/`: pliki kopiowane do `data/combined/` (README, data.yaml, metadane Kaggle).
-* `scripts/plate_detection.py`: moduł (nie skrypt) z detekcją YOLO, wycinaniem i wyrównaniem perspektywy.
-* `scripts/train_yolo.py`, `eval_detection.py`, `eval_alignment.py`, `detect_plates.py`: detekcja
-  (opis w README, sekcja "Detekcja tablic"); `notebooks/detekcja_kaggle.ipynb` uruchamia je na GPU.
+* `tests/`: pytest, bez danych i GPU; `test_build_golden.py` pilnuje powtarzalności zbioru.
 * `runs/` (wagi) i `results/` (metryki, wycinki): wyniki skryptów, duże pliki poza gitem.
 * `data/dataN/`: w gicie tylko adnotacje, `labels.csv` i `SHA256SUMS`; zdjęcia są poza gitem.
 * `process_documentation/<imię>.md`: dziennik pracy każdej osoby (format: patrz skill `dokumentacja`).
@@ -34,16 +37,19 @@ Potok docelowy: folder zdjęć -> przetwarzanie -> detekcja i wyrównanie -> OCR
 * `lighting` jest znane tylko dla UC3M-LP; do analizy naświetlenia używaj `exposure` (under/normal/over).
 * Każda tablica ma kopię z `artificial_corruption != "none"`; przy porównaniach rozdzielaj oryginały i kopie.
 * Detekcja: `sample_type == "full_photo"`, `data/combined/detection/data.yaml`, klasa 0 = tablica.
-* Na Kaggle wycinki leżą w `ocr/ocr/<split>/` (lokalnie `get_data.py` to wyrównuje).
+* Na Kaggle wycinki leżą w `ocr/ocr/<split>/` (lokalnie `get_data.py` to wyrównuje); `crop_path` obsługuje oba układy.
+* Wczytuj przez `alpr.dataset.load_plates(...)` (filtry `sample_type`, `split`, `originals_only`, `ocr_only`),
+  a nie ręcznie przez `pd.read_csv`.
 * Nie commituj zdjęć ani `data/combined/` (są w `.gitignore`).
 
 ## Uruchamianie
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt             # = pip install -e . (pakiet alpr z zależnościami)
 python3 scripts/get_data.py                 # gotowy zbiór z Kaggle (token w ~/.kaggle/)
 python3 scripts/download_data.py            # tylko do przebudowy zbioru
-python3 scripts/build_dataset.py            # wymaga imagecorruptions==1.1.2 i opencv-python
+python3 scripts/build_dataset.py            # wymaga pip install -e ".[build]"
+pip install -e ".[dev]" && pytest && ruff check . && ruff format --check .
 ```
 
 Duże obliczenia (trening YOLO) robimy w Google Colab / notebookach Kaggle, dataset
@@ -53,8 +59,14 @@ Duże obliczenia (trening YOLO) robimy w Google Colab / notebookach Kaggle, data
 
 * Wszystko po polsku: kod (komentarze, docstringi, komunikaty), README, dokumentacja, commity.
 * W tekstach bez em dashów (używaj dwukropka, przecinka albo nawiasu) i bez emotek.
-* Skrypty: `#!/usr/bin/env python3`, docstring z sekcją "Użycie:", `argparse`, ścieżki przez
-  `ROOT = Path(__file__).resolve().parent.parent`, `main() -> int` i `sys.exit(main())`.
+* Logika w `alpr/`, skrypt tylko ją wywołuje. Nie duplikuj funkcji (np. `warp`, IoU, filtrów `plates.csv`):
+  importuj z `alpr`. Każda nowa funkcja w `alpr/` ma test w `tests/`.
+* Skrypty: `#!/usr/bin/env python3`, docstring z sekcją "Użycie:", `argparse`, `ROOT = Path(__file__).resolve().parent.parent`
+  i `sys.path.insert(0, str(ROOT))` przed importem `alpr`, `main() -> int` i `sys.exit(main())`.
+  Pozostałe ścieżki i stałe z `alpr.config`.
+* Styl: `ruff format` i `ruff check` (konfiguracja w `pyproject.toml`) muszą przechodzić.
+* Zmiany w `alpr/build/` zmieniają zbiór na Kaggle: `tests/test_build_golden.py` musi przechodzić
+  albo zmiana jest świadoma i idzie razem z nową wersją zbioru.
 * Losowość zawsze ze stałym ziarnem (`SEED`), żeby wyniki były powtarzalne w całym zespole.
 * Commity: krótki tytuł w trybie rozkazującym ("Dodaj ...", "Przenieś ..."), w treści lista zmian per plik.
 * Po zmianie danych, skryptów lub wyników zaktualizuj README i swój plik w `process_documentation/`.

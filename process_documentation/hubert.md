@@ -99,3 +99,66 @@ przeszedł bez błędów.
 * test detekcji na zdjęciach po filtrach Stańczyka przez `--images-root` (blok 4),
 * przekazanie Golbie `detections.csv` z test i interfejsu `align_plate` do potoku (blok 7),
 * analiza wpływu oświetlenia na metryki detekcji, noc / dzień i under / over (bloki 8-9).
+
+## 17.10.2026: refaktoryzacja repozytorium (pakiet `alpr`)
+
+### Punkt wyjścia
+
+Cały kod leżał płasko w `scripts/`. Obok siebie były skrypty budowy zbioru, moduł biblioteczny
+`plate_detection.py` i skrypty CLI. Te same funkcje powtarzały się w kilku plikach: `warp`
+w `build_dataset.py` i `plate_detection.py`, wczytywanie i filtrowanie `plates.csv`, źródło z `plate_id`
+i flaga oryginał / kopia w trzech skryptach. `requirements.txt` nie miał numpy, pyyaml ani pakietów do
+budowy zbioru. Brakowało testów i miejsca na kod Stańczyka (filtry) i Golby (OCR) przed potokiem
+end-to-end (blok 7). Warunek: `build_dataset.py` ma dawać ten sam zbiór co na Kaggle.
+
+### Struktura
+
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Organizacja kodu | pakiet `alpr/` (`pip install -e .`, `pyproject.toml`), skrypty w `scripts/` jako cienkie CLI pod tymi samymi nazwami i flagami | jeden import dla skryptów, notebooków i potoku; komendy w README i notebooku bez zmian |
+| Moduły | `config`, `dataset`, `geometry`, `build/` (Stańczyk), `preprocessing/`, `detection/` (moja część), `ocr/` | podział jak role w zespole |
+| Skrypty bez instalacji | `sys.path.insert(0, ROOT)` przed importem `alpr` | `python3 scripts/...` działa też u kogoś, kto nie przeinstalował pakietu |
+| Ścieżka zbioru | `config.default_dataset()`: Kaggle input, jeśli jest, inaczej `data/combined` | w notebooku Kaggle nie trzeba podawać `--dataset` |
+| Wycinki na Kaggle | `dataset.crop_path(dataset, crop)` | na Kaggle wycinki są w `ocr/ocr/<split>/`, łatwo o błąd w OCR |
+| `exposure` | w `alpr/dataset.py`, nie w `build/` | definiuje kolumnę i przyda się przy filtrach, a nie wymaga imagecorruptions |
+| `four_corners` i `order_corners` | wspólny kod, ale `four_corners` zostawia 4 punkty w kolejności z adnotacji | tak działał `build_dataset.py`; inna kolejność zmieniłaby wycinki w zbiorze |
+| Szkielety | `preprocessing.enhance(img, method)` z rejestrem `METHODS` (działa tylko `none`), `ocr.read_plate(crop, engine)` z normalizacją tekstu, sygnatury metryk OCR | ustalony interfejs do potoku; implementacje to zadania Stańczyka i Golby (blok 3) |
+| Styl | ruff (`E, F, I, UP, B`, linia 120), `ruff format` | jednolity styl całego repo |
+
+### Poprawki przy okazji
+
+* `detect_plates.py --images`: zdjęcia o tej samej nazwie w różnych podfolderach nadpisywały sobie wycinki.
+  Teraz nazwa zawiera podfolder względem wspólnego katalogu (`a/b.jpg` -> `a__b_0.png`).
+  Przy `--split` nazwy się nie zmieniły.
+* `eval_alignment.py`: predykcje grupowane raz po zdjęciu, a nie filtrowane od nowa dla każdej tablicy.
+* `build_dataset.py`: `argparse` z `--out`, zgodnie z konwencją skryptów.
+
+### Weryfikacja
+
+Przed przeniesieniem zapisałem wyniki starego kodu i porównałem je z nowym:
+
+| Test | Wynik |
+|---|---|
+| zniekształcenia (wszystkie 9 typów), `darken`, `exposure`, `warp`, `align_plate`, `evaluate`, `image_groups` | identyczne hashe |
+| `build_dataset.py` na sztucznych źródłach (12 zdjęć data1, 10 data2 z wielokątami 5-punktowymi, 15 wycinków data3) | 174 pliki identyczne bit w bit |
+| `eval_alignment.py` (ramki z etykiet i z predykcji), `eval_detection.py --preds` | identyczne CSV |
+| `train_yolo.py` (1 epoka, CPU), potem `eval_detection.py --weights` i `detect_plates.py --split` (10800 wycinków) | identyczne predykcje, CSV i wycinki |
+| `pytest` | 58 testów, wszystkie przechodzą |
+
+Przy pisaniu testów wyszło, że nasz AP liczy się dokładnie jak w ultralytics: idealna detekcja daje 0.995,
+a przy niepełnym recall wartość jest nieco zawyżona (interpolacja liniowa do punktu recall 1, precision 0).
+Zostawiłem tak, bo dzięki temu liczby są porównywalne z `model.val()`.
+
+### Stan na koniec dnia
+
+* [x] pakiet `alpr`, cienkie skrypty, `pyproject.toml`, pełne zależności
+* [x] testy (`tests/`), w tym `test_build_golden.py` pilnujący powtarzalności zbioru
+* [x] szkielety `preprocessing` i `ocr`
+* [x] ruff, README (sekcja "Struktura kodu"), CLAUDE.md, notebook (`pip install -e .`)
+* [ ] sprawdzenie na prawdziwym zbiorze (brak tokenu Kaggle lokalnie)
+
+### Do zrobienia (moja część)
+
+* przekazać zespołowi: importy z `alpr`, `pip install -r requirements.txt` po pullu, interfejsy `enhance` i `read_plate` (blok 3),
+* po pobraniu zbioru: `eval_alignment.py --split test` na prawdziwych danych przed i po refaktoryzacji (blok 6),
+* reszta bez zmian względem poprzedniego wpisu (trening na GPU, bloki 5-6).

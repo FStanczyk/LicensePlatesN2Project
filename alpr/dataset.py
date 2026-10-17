@@ -98,6 +98,14 @@ def format_polygon(poly: np.ndarray) -> str:
     return " ".join(str(round(v)) for v in poly.flatten())
 
 
+def crop_path(dataset: str | Path, crop: str) -> Path:
+    """Pełna ścieżka wycinka z kolumny crop. Na Kaggle wycinki leżą o poziom głębiej
+    (ocr/ocr/<split>/, tak rozpakował się ocr.zip); lokalnie get_data.py to wyrównuje."""
+    path = Path(dataset) / crop
+    nested = Path(dataset) / "ocr" / crop
+    return nested if not path.exists() and nested.exists() else path
+
+
 def list_images(folder: Path) -> list[Path]:
     """Wszystkie zdjęcia w folderze (rekurencyjnie), posortowane."""
     return sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMG_EXTS)
