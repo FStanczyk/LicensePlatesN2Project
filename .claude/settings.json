@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/get_data.py*)",
+      "Bash(python3 scripts/download_data.py*)",
+      "Bash(python3 scripts/build_dataset.py*)",
+      "Bash(pip install -r requirements.txt)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(head *)",
+      "Bash(wc *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Read(~/.kaggle/**)"
+    ]
+  }
+}

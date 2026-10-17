@@ -164,3 +164,37 @@ kaggle datasets version -p data/combined -m "opis zmian" -r zip   # nowa wersja 
   w `data/<zbiór>/SHA256SUMS`. Pobieranie można przerwać i wznowić (`--force`).
 * `build_dataset.py` normalizuje etykiety, zmniejsza zdjęcia (dłuższy bok 1920 px), wycina i prostuje
   tablice, dodaje zniekształcenia i liczy `exposure`. Szczegóły decyzji: `process_documentation/filip.md`.
+
+---
+
+## Detekcja tablic
+
+Skrypty w `scripts/`, wspólne funkcje (detekcja, wycinanie, wyrównanie) w `scripts/plate_detection.py`.
+Szczegóły decyzji: `process_documentation/hubert.md`.
+
+```bash
+python3 scripts/train_yolo.py                                   # trening YOLO (GPU: Kaggle/Colab)
+python3 scripts/eval_detection.py --weights runs/detect/plates/weights/best.pt
+python3 scripts/eval_alignment.py                               # jakość wyrównania perspektywy
+python3 scripts/detect_plates.py --weights best.pt --images zdjecia/   # wycinki dla OCR
+```
+
+| Skrypt | Co robi | Wynik |
+|---|---|---|
+| `train_yolo.py` | fine-tuning YOLO (domyślnie `yolo11n.pt`, 640 px) na `detection/data.yaml`, stałe ziarno | `runs/detect/<name>/weights/best.pt` |
+| `eval_detection.py` | P, R, F1, AP50, AP50-95 dla całego podziału i w grupach: źródło, `lighting`, `exposure`, `artificial_corruption`, siła, oryginał / kopia; `--images-root` testuje zdjęcia po filtrze | `results/detection_eval/<name>/metrics.csv` |
+| `eval_alignment.py` | porównuje wycinek ramki z `align_plate` względem prawdziwych 4 narożników (IoU, błąd narożnika) | `results/alignment_eval/<name>/summary.csv` |
+| `detect_plates.py` | folder zdjęć albo podział z `plates.csv` -> wyprostowane wycinki + CSV detekcji | `results/detections/<name>/detections.csv`, `crops/` |
+
+Wszystkie skrypty przyjmują `--dataset` (domyślnie `data/combined`, na Kaggle
+`/kaggle/input/eu-license-plates-alpr`). Trening i ewaluację na GPU uruchamia notebook
+`notebooks/detekcja_kaggle.ipynb`.
+
+Wyrównanie (`align_plate`): YOLO daje prostokątną ramkę, a tablica jest czworokątem. W ramce
+powiększonej o 15% szukamy konturu tablicy (krawędzie Canny oraz jasne tło z progiem Otsu razem
+z niebieskim paskiem UE), przybliżamy go 4 narożnikami, doprecyzowujemy je dopasowaniem prostych
+do boków i prostujemy wycinek tą samą metodą co `build_dataset.py`. Gdy kontur nie pasuje do ramki
+(IoU < 0.6) albo ma nietypowe proporcje, zostaje zwykły wycinek ramki (`align = box`).
+
+Format `detections.csv` (wejście dla OCR): `image, det_id, conf, x1, y1, x2, y2, polygon, align, crop`;
+zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.
