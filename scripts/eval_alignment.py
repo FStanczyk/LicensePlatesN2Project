@@ -21,7 +21,7 @@ import pandas as pd
 from alpr.config import RESULTS, default_dataset
 from alpr.dataset import SPLITS, load_plates
 from alpr.detection import PlateAligner
-from alpr.detection.metrics import BOX, summarize_alignment
+from alpr.detection.metrics import boxes_by_image, summarize_alignment
 from alpr.detection.pipeline import evaluate_alignment
 
 
@@ -37,10 +37,7 @@ def main() -> int:
 
     dataset = args.dataset.resolve()
     df = load_plates(dataset, sample_type="full_photo", split=None if args.split == "all" else args.split)
-    pred_boxes = None
-    if args.preds:
-        preds = pd.read_csv(args.preds).query("conf >= @args.conf")
-        pred_boxes = {image: g[BOX].to_numpy(float) for image, g in preds.groupby("image")}
+    pred_boxes = boxes_by_image(pd.read_csv(args.preds), args.conf) if args.preds else None
     out = RESULTS / "alignment_eval" / (args.name or ("detector" if args.preds else "gt_boxes"))
     examples = out / "examples" if args.examples else None
     (examples or out).mkdir(parents=True, exist_ok=True)

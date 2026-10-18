@@ -24,7 +24,9 @@ Potok docelowy: folder zdjęć -> przetwarzanie -> detekcja i wyrównanie -> OCR
   * `get_data.py`: pobiera gotowy zbiór z Kaggle do `data/combined/`. **Zwykle wystarczy tylko to.**
   * `download_data.py`, `build_dataset.py`: tylko do przebudowy zbioru (źródła w `data/data1..3/photos/`).
   * `train_yolo.py`, `eval_detection.py`, `eval_alignment.py`, `detect_plates.py`: detekcja
-    (opis w README, sekcja "Detekcja tablic", tam też komenda do notebooka Kaggle na GPU).
+    (opis w README, sekcja "Detekcja tablic").
+* `notebooks/detekcja.ipynb`: cała detekcja na GPU (Kaggle/Colab) z podglądem wyników; woła `alpr`,
+  logika nie trafia do notatnika. Commituj bez wyników komórek.
 * `alpr/build/template/`: pliki kopiowane do `data/combined/` (README, data.yaml, metadane Kaggle).
 * `tests/`: pytest, bez danych i GPU; `test_build_golden.py` i `test_build_combine_golden.py` pilnują powtarzalności zbioru.
 * `runs/` (wagi) i `results/` (metryki, wycinki): wyniki skryptów, duże pliki poza gitem.

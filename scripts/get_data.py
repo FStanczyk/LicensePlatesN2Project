@@ -5,7 +5,8 @@ Użycie:
     python3 scripts/get_data.py            # pobierz, jeśli jeszcze nie ma (przerwane pobieranie się wznawia)
     python3 scripts/get_data.py --force    # pobierz ponownie (np. nowa wersja na Kaggle)
 
-Wymaga tokenu API Kaggle w ~/.kaggle/ (kaggle.com -> Settings -> API). Dostęp do zbioru nadaje Stańczyk.
+Prywatny zbiór: token API Kaggle w ~/.kaggle/ (kaggle.com -> Settings -> API), konto dodane przez Stańczyka.
+Publiczny zbiór pobiera się bez tokenu.
 Stary zbiór jest podmieniany dopiero po udanym pobraniu i rozpakowaniu.
 """
 
@@ -39,7 +40,11 @@ def main() -> int:
     if dest.exists() and any(dest.iterdir()) and not (dest / "plates.csv").exists():
         print(f"BŁĄD: {dest} nie jest pusty i nie zawiera zbioru, wybierz inny --dest")
         return 1
-    fetch_kaggle(dest)
+    try:
+        fetch_kaggle(dest)
+    except PermissionError as e:
+        print(f"BŁĄD: {e}")
+        return 1
     return check(dest)
 
 

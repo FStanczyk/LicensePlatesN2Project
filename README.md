@@ -91,8 +91,11 @@ pip install -r requirements.txt     # instaluje pakiet alpr (pip install -e .) z
 python3 scripts/get_data.py
 ```
 
-Potrzebny jest token API Kaggle: kaggle.com -> Settings -> API -> Create New Token, plik zapisz
-w `~/.kaggle/`. Skrypt pobiera ok. 4.5 GB do `data/_downloads/` (przerwane pobieranie wznawia się
+Zbiór jest prywatny, więc potrzebny jest token API Kaggle konta, które Stańczyk dodał do zbioru
+(Settings -> Sharing): kaggle.com -> Settings -> API -> Create New Token, plik zapisz w `~/.kaggle/`.
+Skrypt najpierw próbuje pobrać archiwum zwykłym HTTP (równolegle, kawałkami, działa bez tokenu, jeśli
+zbiór stanie się publiczny), a po odpowiedzi 403 przechodzi na API Kaggle z tokenem.
+Skrypt pobiera ok. 4.5 GB do `data/_downloads/` (przerwane pobieranie wznawia się
 po ponownym uruchomieniu), rozpakowuje równolegle i sprawdza, czy są wszystkie pliki z `plates.csv`.
 Przy kolejnym uruchomieniu nic nie pobiera; po nowej wersji na Kaggle użyj `--force` (stary zbiór
 jest podmieniany dopiero po udanym pobraniu).
@@ -195,8 +198,19 @@ python3 scripts/detect_plates.py --weights best.pt --images zdjecia/   # wycinki
 | `detect_plates.py` | folder zdjęć albo podział z `plates.csv` -> wyprostowane wycinki + CSV detekcji | `results/detections/<name>/detections.csv`, `crops/` |
 
 Wszystkie skrypty przyjmują `--dataset`. Domyślnie to `data/combined`, a w notebooku Kaggle
-z podpiętym datasetem `/kaggle/input/eu-license-plates-alpr`. Trening na GPU: nowy notebook Kaggle
-(Accelerator GPU, Internet włączony, Add Input: `filipstanczyk/eu-license-plates-alpr`) i komórka:
+z podpiętym datasetem `/kaggle/input/eu-license-plates-alpr`.
+
+**Trening na GPU: `notebooks/detekcja.ipynb`.** Na Kaggle: nowy notebook, File -> Import Notebook,
+Accelerator GPU, Internet włączony, Add Input `filipstanczyk/eu-license-plates-alpr`, Run All.
+W Colab: Runtime GPU i token Kaggle w Secrets (`KAGGLE_USERNAME`, `KAGGLE_KEY`), zbiór pobiera się do `data/combined/`.
+Pierwsza komórka klonuje repozytorium (gałąź `main`) i instaluje `alpr`, druga to parametry
+(`MODEL`, `IMGSZ`, `EPOCHS`, `NAME`, `WEIGHTS`). Notatnik wywołuje te same funkcje co skrypty
+i pokazuje po drodze: liczności zbioru, przykłady z etykietami, krzywe treningu, tabelę i wykres
+metryk w grupach, przeoczone tablice, ocenę wyrównania z przykładami i wycinki dla OCR.
+Gdy wagi `runs/detect/<NAME>/weights/best.pt` już są, trening jest pomijany. Na koniec pakuje
+wagi i wyniki do `<NAME>.zip` (Kaggle: Output, Colab: pobranie).
+
+Bez notatnika, jedną komórką:
 
 ```bash
 !git clone -q https://github.com/FStanczyk/LicensePlatesN2Project.git && cd LicensePlatesN2Project && pip install -q -e . \

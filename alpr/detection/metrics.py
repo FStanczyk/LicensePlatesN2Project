@@ -119,6 +119,12 @@ def best_matching_box(boxes: np.ndarray, gt_box: np.ndarray, min_iou: float = 0.
     return best
 
 
+def boxes_by_image(preds: pd.DataFrame, conf: float) -> dict[str, np.ndarray]:
+    """Ramki predykcji z pewnością >= conf dla każdego zdjęcia."""
+    kept = preds[preds.conf >= conf]
+    return {image: g[BOX].to_numpy(float) for image, g in kept.groupby("image")}
+
+
 def summarize_alignment(res: pd.DataFrame) -> pd.DataFrame:
     """Średnie w grupach; better: odsetek tablic, na których wyrównanie poprawia IoU o ponad 0.01."""
     long = pd.concat([res.assign(group="all", value="all"), *(res.assign(group=c, value=res[c]) for c in ALIGN_GROUPS)])

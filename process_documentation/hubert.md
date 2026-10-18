@@ -221,3 +221,57 @@ Zgodność ze starym kodem (wzorce zapisane przed zmianami):
 * po pullu: `pip install -e .` (skrypty nie działają już bez instalacji pakietu), przekazać to zespołowi (blok 3),
 * uruchomić `get_data.py` z tokenem i sprawdzić wznawianie po przerwaniu (blok 3),
 * trening na GPU komendą z README (bloki 5-6).
+
+## 18.10.2026: pobieranie zbioru bez tokenu Kaggle
+
+### Punkt wyjścia
+`get_data.py` zawsze wymagał tokenu API Kaggle w `~/.kaggle/`, każda osoba musiała go wygenerować.
+Publiczne datasety Kaggle da się pobrać anonimowo: `https://www.kaggle.com/api/v1/datasets/download/<właściciel>/<nazwa>`
+przekierowuje na podpisany URL w Google Cloud Storage, który obsługuje zapytania Range.
+
+### Zmiany
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Pobieranie | najpierw `download(KAGGLE_URL)` bez tokenu, przy 401/403 API Kaggle z tokenem | brak tokenu przy publicznym zbiorze, dalej działa przy prywatnym |
+| Kawałki | `download` po sprawdzeniu Range używa adresu po przekierowaniu | jedno zapytanie do API Kaggle zamiast jednego na kawałek |
+| Istniejący zip | pobrany w całości zip w `data/_downloads/` nie jest pobierany ponownie | po błędzie rozpakowania wystarczy uruchomić skrypt jeszcze raz |
+
+### Wynik
+| Test | Wynik |
+|---|---|
+| `download` na publicznym zbiorze (Poland Vehicle License Plate, 603 MB) bez tokenu | pobrany równolegle, CRC wszystkich 291 plików poprawne |
+| `download` na `filipstanczyk/eu-license-plates-alpr` | HTTP 403 (zbiór prywatny), czyli przejście na API |
+| `pytest`, `ruff` | 79 testów przechodzi, lint czysty |
+| `get_data.py` z tokenem konta `wodarczykhubert` | 403 także z API: konto nie ma dostępu do prywatnego zbioru; skrypt kończy się teraz czytelnym `BŁĄD` zamiast tracebacku |
+
+### Stan na koniec dnia
+* [x] pobieranie bez tokenu dla publicznego zbioru, z przejściem na token dla prywatnego
+* [ ] upublicznienie datasetu na Kaggle (decyzja i ustawienie po stronie Stańczyka, sprawdzić licencje źródeł)
+
+## 18.10.2026: notatnik do detekcji (`notebooks/detekcja.ipynb`)
+
+### Punkt wyjścia
+Trening i ewaluację na GPU uruchamiało się jedną długą komórką z czterema skryptami. Wyniki trzeba było
+potem pobierać i oglądać osobno, nie było widać przykładów ani błędów detektora. Poprzedni notatnik
+usunąłem, bo tylko wołał skrypty.
+
+### Decyzje
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Co woła | funkcje `alpr` (`train_detector`, `predict_boxes`, `evaluate_by_group`, `evaluate_alignment`, `crop_plates`), nie skrypty | wyniki zostają w pamięci, można je od razu pokazać |
+| Środowisko | wykrywa Kaggle / Colab / lokalnie; na Kaggle i w Colab klonuje repo (gałąź `BRANCH`) i robi `pip install -e .` | jeden plik na wszystkie środowiska |
+| Dane | podpięty input Kaggle, inaczej `fetch_kaggle` (w Colab token z Secrets) | bez ręcznego pobierania |
+| Trening | pomijany, gdy `best.pt` dla `NAME` już jest albo podano `WEIGHTS` | ponowne uruchomienie nie trenuje od nowa |
+| Podgląd | liczności, przykłady z etykietami, krzywe, tabela i wykres R / AP50 w grupach, przeoczone tablice, przykłady wyrównania, wycinki | widać, gdzie detektor się myli |
+| Wyniki | te same katalogi co skrypty (`runs/`, `results/*/<NAME>`) i zip na koniec | porównywalne ze skryptami, łatwe pobranie z Kaggle |
+| Wspólny kod | `boxes_by_image` przeniesione ze `eval_alignment.py` do `alpr.detection.metrics` (z testem) | notatnik i skrypt nie duplikują kodu |
+
+### Wynik
+Cały notatnik wykonany komórka po komórce na syntetycznym zbiorze w formacie `data/combined`
+(80 zdjęć, 1 epoka na CPU, sprawdzenie kodu, nie wynik projektu). Przy tym wyszły i zostały poprawione dwa błędy:
+`detected` w `plates.csv` jest liczbą (0/1), a nie bool; `detections.align` to metoda pandas, nie kolumna.
+`pytest` (80 testów) i `ruff` (także na notatniku) przechodzą.
+
+### Do zrobienia
+* uruchomić notatnik na Kaggle z GPU (pierwsze prawdziwe liczby baseline, blok 5),
+* [x] po scaleniu `refaktoryzacja` do `main`: notatnik i README klonują `main`.
