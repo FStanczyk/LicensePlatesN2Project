@@ -1,3 +1,1 @@
-kaggle
-pandas
-opencv-python
+-e .
