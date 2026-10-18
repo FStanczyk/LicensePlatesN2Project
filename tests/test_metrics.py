@@ -5,6 +5,7 @@ import pytest
 from alpr.detection.metrics import (
     average_precision,
     best_matching_box,
+    boxes_by_image,
     corner_error,
     evaluate,
     evaluate_by_group,
@@ -147,3 +148,11 @@ def test_summarize_alignment():
     assert summary.loc[("all", "all"), "better"] == 0.5
     assert summary.loc[("method", "quad"), "iou_aligned"] == pytest.approx(0.9)
     assert list(summary.columns) == ["plates", "iou_box", "iou_aligned", "err_box", "err_aligned", "better"]
+
+
+def test_boxes_by_image():
+    preds = pd.DataFrame(
+        {"image": ["a", "a", "b"], "conf": [0.9, 0.1, 0.1], "x1": [1, 2, 3], "y1": 0, "x2": 5, "y2": 5}
+    )
+    boxes = boxes_by_image(preds, 0.25)
+    assert list(boxes) == ["a"] and boxes["a"].tolist() == [[1, 0, 5, 5]]

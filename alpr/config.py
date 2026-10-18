@@ -10,6 +10,7 @@ RESULTS = ROOT / "results"
 RUNS = ROOT / "runs"
 
 KAGGLE_DATASET = "filipstanczyk/eu-license-plates-alpr"
+KAGGLE_URL = f"https://www.kaggle.com/api/v1/datasets/download/{KAGGLE_DATASET}"
 KAGGLE_INPUT = Path("/kaggle/input/eu-license-plates-alpr")
 
 SEED = 0

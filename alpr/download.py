@@ -6,6 +6,7 @@ import os
 import shutil
 import struct
 import time
+import urllib.error
 import urllib.request
 import zipfile
 import zlib
@@ -15,7 +16,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from alpr.config import DOWNLOADS, KAGGLE_DATASET
+from alpr.config import DOWNLOADS, KAGGLE_DATASET, KAGGLE_URL
 
 WORKERS = 8
 CHUNK = 32 << 20
@@ -46,6 +47,7 @@ def download(url: str, dest: Path) -> None:
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers={"Range": "bytes=0-0"})) as resp:
             total = int(resp.headers.get("Content-Range", "/0").split("/")[-1]) if resp.status == 206 else 0
+            url = resp.url
     except (OSError, ValueError):
         total = 0
     part = dest.with_suffix(".part")
@@ -208,15 +210,34 @@ class Archive:
                     on_done()
 
 
-def fetch_kaggle(dest: Path) -> None:
-    """Pobiera zbiór z Kaggle (z wznawianiem) i podmienia dest dopiero po udanym rozpakowaniu."""
+def _kaggle_api_download() -> None:
     from kaggle.api.kaggle_api_extended import KaggleApi
 
     api = KaggleApi()
     api.authenticate()
-    zip_path = DOWNLOADS / f"{KAGGLE_DATASET.split('/')[1]}.zip"
-    print(f"Pobieranie {KAGGLE_DATASET} (ok. 4.5 GB) do {zip_path}")
     api.dataset_download_files(KAGGLE_DATASET, path=str(DOWNLOADS), quiet=False)
+
+
+def fetch_kaggle(dest: Path) -> None:
+    """Pobiera zbiór z Kaggle bez tokenu (publiczny) albo przez API z tokenem (prywatny) i podmienia dest."""
+    zip_path = DOWNLOADS / f"{KAGGLE_DATASET.split('/')[1]}.zip"
+    if not zip_path.exists():
+        print(f"Pobieranie {KAGGLE_DATASET} (ok. 4.5 GB) do {zip_path}")
+        try:
+            download(KAGGLE_URL, zip_path)
+        except urllib.error.HTTPError as e:
+            if e.code not in (401, 403):
+                raise
+            print("Zbiór nie jest publiczny, pobieranie przez API Kaggle (token w ~/.kaggle/)")
+            try:
+                _kaggle_api_download()
+            except OSError as api_error:
+                if getattr(getattr(api_error, "response", None), "status_code", None) != 403:
+                    raise
+                raise PermissionError(
+                    f"to konto Kaggle nie ma dostępu do {KAGGLE_DATASET}: właściciel musi je dodać"
+                    " (Settings -> Sharing) albo upublicznić zbiór"
+                ) from None
     tmp = dest.with_name(dest.name + ".tmp")
     shutil.rmtree(tmp, ignore_errors=True)
     print(f"Rozpakowywanie do {dest}")
