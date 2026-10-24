@@ -18,13 +18,17 @@ Potok docelowy: folder zdjęć -> przetwarzanie -> detekcja i wyrównanie -> OCR
 * `alpr/`: pakiet z całą logiką (`pip install -e .`), opis modułów w README, sekcja "Struktura kodu":
   `config` (ścieżki, `SEED`), `dataset` (`load_plates`, `crop_path`, `normalize_text`, `write_csv`),
   `geometry` (`warp`, IoU), `download` (HTTP, zip, Kaggle), `build/` (`sources.py`: klasa na źródło,
-  `writer.py`: `CombinedWriter`), `preprocessing.py` i `ocr.py` (szkielety),
+  `writer.py`: `CombinedWriter`), `preprocessing.py` (szkielet), `ocr.py` (EasyOCR, `read_crops`; metryki do uzupełnienia),
+  `experiment` (zbiór eksperymentu i zestawienie z ground truth),
   `detection/` (`PlateDetector`, `PlateAligner`, `training`, `pipeline`, `metrics`).
 * `scripts/`: cienkie CLI wywołujące `alpr`:
   * `get_data.py`: pobiera gotowy zbiór z Kaggle do `data/combined/`. **Zwykle wystarczy tylko to.**
   * `download_data.py`, `build_dataset.py`: tylko do przebudowy zbioru (źródła w `data/data1..3/photos/`).
   * `train_yolo.py`, `eval_detection.py`, `eval_alignment.py`, `detect_plates.py`: detekcja
     (opis w README, sekcja "Detekcja tablic").
+  * `ocr_plates.py`: odczyt wycinków z `detections.csv` do `ocr_<silnik>.csv` (README, sekcja "OCR").
+  * `build_experiment.py`, `run_experiment.py`: zbiór eksperymentu (ground truth + zniekształcone wersje
+    w `data/experiment/`) i detekcja z OCR na nim (README, sekcja "Eksperyment").
 * `notebooks/detekcja.ipynb`: cała detekcja na GPU (Kaggle/Colab) z podglądem wyników; woła `alpr`,
   logika nie trafia do notatnika. Commituj bez wyników komórek.
 * `alpr/build/template/`: pliki kopiowane do `data/combined/` (README, data.yaml, metadane Kaggle).

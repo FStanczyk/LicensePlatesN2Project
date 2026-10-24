@@ -26,3 +26,7 @@ runs/
 results/detections/
 results/**/examples/
 results/**/predictions.csv
+
+# Eksperyment (Golba): zdjęcia z build_experiment.py i wycinki z run_experiment.py
+data/experiment/
+results/experiment/*/crops/
