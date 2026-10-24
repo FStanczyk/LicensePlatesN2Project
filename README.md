@@ -39,6 +39,35 @@
 
 ---
 
+## Stan prac
+
+**24.10.2026, blok 2 (Golba)**: baseline całego potoku (detekcja + OCR) na zdjęciach czystych i zniekształconych.
+
+* Zbiór eksperymentu z ground truth (ramka i tekst): 81 polskich zdjęć z data1 (`val` + `test`, nieużyte do uczenia
+  YOLO), każde w wersji czystej i 20 zniekształconych (rozjaśnienie, przyciemnienie, rozmycie ruchem i ostrości,
+  siła 1-5). Szczegóły w sekcji "Eksperyment".
+* YOLO `yolo11n` (640 px) wytrenowane lokalnie: val P 0.969, R 0.943, mAP50 0.969, mAP50-95 0.786.
+* OCR: EasyOCR bez dostrajania, odczyty zapisywane do CSV (`scripts/ocr_plates.py`, `scripts/run_experiment.py`).
+
+Najważniejsze wyniki (81 tablic na wersję):
+
+| | Czyste | Siła 3 | Siła 5 |
+|---|---|---|---|
+| Wykryte tablice, każde zniekształcenie | 100% | 100% | 98.8-100% |
+| Odczyt bezbłędny, przyciemnienie | 36% | 20% | 7% |
+| Odczyt bezbłędny, rozmycie ruchem | 36% | 2.5% | 0% |
+| Odczyt bezbłędny, rozmycie ostrości | 36% | 1.2% | 0% |
+| Odczyt bezbłędny, rozjaśnienie | 36% | 42% | 44% |
+
+* Detektor jest odporny na wszystkie badane zniekształcenia (w treningu widział zniekształcone kopie),
+  więc spadek skuteczności całego potoku wynika z OCR.
+* Najbardziej szkodzi rozmycie: już przy sile 3 odczyt praktycznie nie działa. Przyciemnienie obniża skuteczność
+  stopniowo, a lekkie rozjaśnienie nawet ją poprawia.
+* Już na czystych zdjęciach EasyOCR odczytuje bezbłędnie tylko 36% tablic. Typowe błędy: niebieski pasek UE
+  czytany jako litera oraz mylenie I/L/1 i 5/S. To pierwsze miejsce do poprawy (bloki 5-6).
+
+---
+
 ## Możliwe eksperymenty
 * analiza obrazów wykonanych w dzień, w nocy i o zmierzchu,
 * różne poziomy oświetlenia: niedoświetlenie i prześwietlenie,
