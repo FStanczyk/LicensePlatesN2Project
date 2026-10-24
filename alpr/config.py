@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 COMBINED = DATA_DIR / "combined"
 DOWNLOADS = DATA_DIR / "_downloads"
+EXPERIMENT = DATA_DIR / "experiment"
 RESULTS = ROOT / "results"
 RUNS = ROOT / "runs"
 

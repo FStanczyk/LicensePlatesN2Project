@@ -47,7 +47,7 @@ def crop_plates(
     detector: PlateDetector, images: list[str], base: Path, out: Path, aligner: PlateAligner | None = None
 ) -> list[dict]:
     """Zapisuje wycinki w out/crops; zdjęcie bez detekcji daje wiersz z samym image."""
-    common = os.path.commonpath([PurePosixPath(rel).parent.as_posix() for rel in images])
+    common = os.path.commonpath([PurePosixPath(rel).parent.as_posix() for rel in images]).replace(os.sep, "/")
     (out / "crops").mkdir(parents=True, exist_ok=True)
     rows = []
     for rel, img in read_images(images, base):
@@ -70,6 +70,11 @@ def crop_plates(
                 }
             )
     return rows
+
+
+def read_detections(path: Path) -> pd.DataFrame:
+    """detections.csv z całkowitymi det_id i ramkami mimo pustych wierszy zdjęć bez detekcji."""
+    return pd.read_csv(path, dtype=dict.fromkeys(["det_id", *BOX], "Int64"))
 
 
 def alignment_example(img: np.ndarray, box: np.ndarray, aligned: np.ndarray, gt: np.ndarray) -> np.ndarray:

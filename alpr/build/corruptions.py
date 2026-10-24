@@ -40,13 +40,18 @@ def darken(img: np.ndarray, severity: int) -> np.ndarray:
     return (255 * gain * (img / 255.0) ** gamma).astype(np.uint8)
 
 
+def apply_corruption(img: np.ndarray, name: str, severity: int, key: str) -> np.ndarray:
+    """Zniekształcenie name o sile 1-5, losowość powtarzalna na podstawie key; img w BGR."""
+    if name == "darken":
+        return darken(img, severity)
+    np.random.seed(zlib.crc32(key.encode()))
+    rgb = np.ascontiguousarray(img[:, :, ::-1])
+    out = corrupt(rgb, corruption_name=name, severity=severity)
+    return np.ascontiguousarray(out[:, :, ::-1])
+
+
 def add_corruption(img: np.ndarray, key: str) -> tuple[np.ndarray, str, int]:
     """Powtarzalnie losowane (na podstawie key) zniekształcenie i siła 1-5; img w BGR."""
     rng = random.Random(f"{SEED}:{key}")
     name, severity = rng.choice(CORRUPTIONS), rng.randint(1, 5)
-    if name == "darken":
-        return darken(img, severity), name, severity
-    np.random.seed(zlib.crc32(key.encode()))
-    rgb = np.ascontiguousarray(img[:, :, ::-1])
-    out = corrupt(rgb, corruption_name=name, severity=severity)
-    return np.ascontiguousarray(out[:, :, ::-1]), name, severity
+    return apply_corruption(img, name, severity, key), name, severity

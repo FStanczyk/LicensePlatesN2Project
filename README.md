@@ -229,6 +229,76 @@ do boków i prostujemy wycinek tą samą metodą co `build_dataset.py`. Gdy kont
 Format `detections.csv` (wejście dla OCR): `image, det_id, conf, x1, y1, x2, y2, polygon, align, crop`;
 zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.
 
+
+---
+
+## OCR
+
+Wejście to `detections.csv` z `detect_plates.py`. Silnik: EasyOCR (model angielski, znaki tylko A-Z i 0-9,
+GPU, jeśli jest). Fragmenty tekstu są sklejane w kolejności czytania (tablice dwuwierszowe: górny wiersz pierwszy).
+Modele EasyOCR pobierają się raz do `~/.EasyOCR/`.
+
+```bash
+python3 scripts/train_yolo.py --device 0                                             # raz: runs/detect/plates/weights/best.pt
+python3 scripts/detect_plates.py --weights runs/detect/plates/weights/best.pt --split test
+python3 scripts/ocr_plates.py --detections results/detections/test/detections.csv    # ocr_easyocr.csv obok
+```
+
+| Skrypt | Co robi | Wynik |
+|---|---|---|
+| `ocr_plates.py` | odczyt każdego wycinka z `detections.csv`; istniejący wynik nie jest liczony ponownie bez `--force` | `results/detections/<name>/ocr_<silnik>.csv` |
+
+Format `ocr_<silnik>.csv`: kolumny `detections.csv` oraz `text` (znormalizowany jak `text` w `plates.csv`)
+i `conf_ocr` (0-1); zdjęcie bez detekcji ma puste `text`. Tablice UC3M-LP (`data2_`) mają zamazane znaki,
+więc ich odczyty nie nadają się do metryk.
+
+---
+
+## Eksperyment: wpływ zniekształceń na detekcję i OCR
+
+Osobny zbiór, na którym mierzymy cały potok. Ground truth to zdjęcia, które jednocześnie:
+są całymi zdjęciami z ramką tablicy (nie gotowymi wycinkami, więc odpada AUTO.RIA), mają czytelny tekst
+(`blurred == 0`, więc odpada UC3M-LP), są oryginałami (bez kopii z `plates.csv`) i nie były użyte do uczenia
+wag YOLO (podziały `val` i `test`; `val` służył tylko do wyboru epoki). Zostaje 81 zdjęć z data1
+(Polska, po 1 tablicy). Każde zdjęcie dostaje 20 zniekształconych wersji: `brightness` (rozjaśnienie),
+`darken` (przyciemnienie), `motion_blur` i `defocus_blur` (rozmycie), każde w sile 1-5. Zniekształcenia
+nie zmieniają geometrii, więc ramki i tekst z ground truth obowiązują we wszystkich wersjach.
+
+```bash
+pip install -e ".[build]"                                                    # imagecorruptions
+python3 scripts/build_experiment.py                                          # raz, ok. 9 min
+python3 scripts/run_experiment.py --weights runs/detect/plates/weights/best.pt
+```
+
+| Skrypt | Co robi | Wynik |
+|---|---|---|
+| `build_experiment.py` | wybiera ground truth i zapisuje wersje zdjęć (`--splits`, `--corruptions`) | `data/experiment/images/<wersja>/`, `ground_truth.csv` |
+| `run_experiment.py` | detekcja i wyrównanie, OCR, dopasowanie do ground truth (IoU >= 0.5, jak w metrykach detekcji) | `results/experiment/<name>/` |
+
+Każdy krok z gotowym wynikiem jest pomijany (`--force`, aby policzyć od nowa).
+Wersja to `clean` albo `<zniekształcenie>_<siła>`.
+
+| Plik | Zawartość |
+|---|---|
+| `data/experiment/ground_truth.csv` | jedna linia na (wersja, tablica): `variant`, `artificial_corruption`, `artificial_severity`, `image`, `source_image` (zdjęcie w `data/combined`), `plate_id`, `split`, `text`, `country`, `exposure`, `x1`-`y2`, `polygon` |
+| `results/experiment/<name>/detections.csv`, `crops/` | detekcja na wszystkich wersjach, format jak w `detect_plates.py` |
+| `results/experiment/<name>/ocr_easyocr.csv` | to samo z odczytem `text`, `conf_ocr` |
+| `results/experiment/<name>/plates.csv` | tablica z ground truth obok dopasowanej detekcji: `text_true`, `detected`, `iou`, `det_conf`, `align`, `crop`, `text_pred`, `conf_ocr`, `text_ok` |
+| `results/experiment/<name>/summary.csv` | odsetek wykrytych (`detected`) i bezbłędnie odczytanych (`text_ok`) tablic na wersję |
+
+Baseline (`yolo11n`, 640 px, wytrenowany lokalnie, EasyOCR bez dostrajania), 81 tablic na wersję:
+
+| Zniekształcenie | Siła 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| wykryte, każde zniekształcenie | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.988-1.000 |
+| odczyt bezbłędny, `brightness` | 0.358 | 0.407 | 0.432 | 0.420 | 0.444 | 0.444 |
+| odczyt bezbłędny, `darken` | 0.358 | 0.395 | 0.333 | 0.198 | 0.136 | 0.074 |
+| odczyt bezbłędny, `motion_blur` | 0.358 | 0.210 | 0.086 | 0.025 | 0.000 | 0.000 |
+| odczyt bezbłędny, `defocus_blur` | 0.358 | 0.198 | 0.111 | 0.012 | 0.000 | 0.000 |
+
+Detektor jest prawie niewrażliwy na te zniekształcenia, bo w treningu widział losowo zniekształcone kopie
+zdjęć (te same typy). Spadek skuteczności całego potoku wynika więc głównie z OCR.
+
 ---
 
 ## Struktura kodu
@@ -246,7 +316,8 @@ Skrypty wymagają zainstalowanego pakietu (`pip install -e .`). Najczęściej u�
 | `alpr/build/` | `sources.py` (klasa na każde źródło: pobieranie, wybór podzbioru, składanie), `writer.py` (`CombinedWriter`), `corruptions.py` | Stańczyk |
 | `alpr/preprocessing.py` | `enhance(img, method)`: szkielet, metody do uzupełnienia | Stańczyk |
 | `alpr/detection/` | `PlateDetector`, `PlateAligner`, `training.py`, `pipeline.py` (przebiegi po zdjęciach), `metrics.py` | Włodarczyk |
-| `alpr/ocr.py` | `read_plate(crop, engine)`, metryki OCR: szkielet do uzupełnienia | Golba |
+| `alpr/experiment.py` | zbiór eksperymentu: `ground_truth`, `build_experiment`, `match_results`, `summary` | Golba |
+| `alpr/ocr.py` | `read_plate(crop, engine)` (silnik `easyocr`), `read_crops` (odczyt wycinków z `detections.csv`); metryki OCR do uzupełnienia | Golba |
 
 Nowa funkcja trafia do `alpr/`, a skrypt tylko ją wywołuje. Testy i lint:
 
