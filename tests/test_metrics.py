@@ -156,3 +156,155 @@ def test_boxes_by_image():
     )
     boxes = boxes_by_image(preds, 0.25)
     assert list(boxes) == ["a"] and boxes["a"].tolist() == [[1, 0, 5, 5]]
+
+
+def test_match_prog_iou_wlacznie():
+    gt = np.array([[0, 0, 10, 10]], float)
+    pred = np.array([[0, 0, 10, 5]], float)
+    assert match(pred, gt, 0.5)[0].tolist() == [True]
+    assert match(pred, gt, 0.51)[0].tolist() == [False]
+
+
+def test_match_puste_wejscia():
+    tp, owner = match(np.zeros((0, 4)), np.array([[0, 0, 10, 10]], float), 0.5)
+    assert tp.tolist() == [] and owner.tolist() == [-1]
+    tp, owner = match(np.array([[0, 0, 10, 10]], float), np.zeros((0, 4)), 0.5)
+    assert tp.tolist() == [False] and owner.tolist() == []
+
+
+def test_match_predykcja_wybiera_najlepiej_pokryta_tablice():
+    gt = np.array([[0, 0, 10, 10], [4, 0, 14, 10]], float)
+    tp, owner = match(np.array([[5, 0, 15, 10]], float), gt, 0.5)
+    assert tp.tolist() == [True] and owner.tolist() == [-1, 0]
+
+
+def test_average_precision_polowa_tablic():
+    assert average_precision(np.array([True]), np.array([0.9]), 2) == pytest.approx(0.75)
+
+
+def test_average_precision_same_bledy():
+    assert average_precision(np.array([False, False]), np.array([0.9, 0.8]), 2) == pytest.approx(0.0)
+
+
+def test_average_precision_niezalezne_od_kolejnosci_wejscia():
+    rng = np.random.default_rng(0)
+    tp = rng.random(30) > 0.4
+    conf = rng.random(30)
+    perm = rng.permutation(30)
+    assert average_precision(tp[perm], conf[perm], 25) == pytest.approx(average_precision(tp, conf, 25))
+
+
+def test_average_precision_w_przedziale_0_1():
+    rng = np.random.default_rng(1)
+    for _ in range(20):
+        n = int(rng.integers(1, 40))
+        tp = rng.random(n) > 0.5
+        ap = average_precision(tp, rng.random(n), int(tp.sum()) + int(rng.integers(0, 5)))
+        assert 0.0 <= ap <= 1.0
+
+
+def single_gt():
+    return make_gt().iloc[:1]
+
+
+def pred(image, conf, x1, y1, x2, y2):
+    return {"image": image, "conf": conf, "x1": x1, "y1": y1, "x2": x2, "y2": y2}
+
+
+def test_evaluate_falszywy_alarm_obniza_precyzje():
+    preds = pd.DataFrame([pred("a.jpg", 0.9, 0, 0, 100, 30), pred("a.jpg", 0.8, 300, 300, 400, 330)])
+    metrics, plates = evaluate(single_gt(), preds, 0.25)
+    assert (metrics["P"], metrics["R"]) == (0.5, 1.0)
+    assert metrics["F1"] == pytest.approx(2 / 3)
+    assert metrics["AP50"] == pytest.approx(0.995)
+    assert plates.conf.tolist() == [0.9]
+
+
+def test_evaluate_podwojna_detekcja_to_falszywy_alarm():
+    preds = pd.DataFrame([pred("a.jpg", 0.9, 0, 0, 100, 30), pred("a.jpg", 0.8, 1, 0, 101, 30)])
+    metrics, _ = evaluate(single_gt(), preds, 0.25)
+    assert metrics["P"] == 0.5 and metrics["R"] == 1.0
+
+
+def test_evaluate_przesunieta_ramka_obniza_ap50_95_a_nie_ap50():
+    preds = pd.DataFrame([pred("a.jpg", 0.9, 10, 0, 110, 30)])
+    metrics, plates = evaluate(single_gt(), preds, 0.25)
+    assert metrics["AP50"] == pytest.approx(0.995)
+    assert metrics["AP50_95"] < metrics["AP50"]
+    assert plates.iou.tolist() == [round(90 / 110, 3)]
+
+
+def test_evaluate_niedetekcja_ma_iou_najlepszej_ramki_i_pusty_conf():
+    preds = pd.DataFrame([pred("a.jpg", 0.9, 60, 0, 160, 30)])
+    _, plates = evaluate(single_gt(), preds, 0.25)
+    row = plates.iloc[0]
+    assert row.detected == 0 and row.conf == "" and 0 < row.iou < 0.5
+
+
+def test_evaluate_bez_zadnych_predykcji():
+    metrics, plates = evaluate(make_gt(), pd.DataFrame(columns=["image", "conf", "x1", "y1", "x2", "y2"]), 0.25)
+    assert (metrics["P"], metrics["R"], metrics["F1"], metrics["AP50"]) == (0.0, 0.0, 0.0, 0.0)
+    assert (metrics["images"], metrics["plates"]) == (2, 3)
+    assert plates.detected.tolist() == [0, 0, 0]
+
+
+def test_evaluate_prog_conf_nie_zmienia_ap():
+    gt = make_gt()
+    preds = gt[["image", "x1", "y1", "x2", "y2"]].assign(conf=[0.9, 0.5, 0.1])
+    low, _ = evaluate(gt, preds, 0.05)
+    high, _ = evaluate(gt, preds, 0.6)
+    assert low["AP50"] == high["AP50"]
+    assert (low["R"], high["R"]) == (1.0, pytest.approx(1 / 3))
+
+
+def test_evaluate_by_group_liczba_wierszy():
+    gt = make_gt()
+    table, _ = evaluate_by_group(gt, gt[["image", "x1", "y1", "x2", "y2"]].assign(conf=0.9), 0.25)
+    expected = 1 + image_groups(gt).nunique().sum()
+    assert len(table) == expected
+    assert (table.R == 1.0).all()
+
+
+def test_image_groups_dodaje_kolumny_pochodne_tylko_gdy_brak():
+    gt = make_gt().assign(source="inne", corrupted="x")
+    assert image_groups(gt).loc["a.jpg", "source"] == "inne"
+
+
+def test_corner_error_niezalezny_od_skali():
+    gt = np.array([[0, 0], [100, 0], [100, 20], [0, 20]], float)
+    est = gt + [3, -2]
+    assert corner_error(est * 4, gt * 4) == pytest.approx(corner_error(est, gt))
+
+
+def test_corner_error_zdegenerowana_tablica_nie_dzieli_przez_zero():
+    gt = np.zeros((4, 2))
+    assert corner_error(gt + 1, gt) == pytest.approx(np.sqrt(2))
+
+
+def test_best_matching_box_wybiera_najwyzsze_iou_nie_pierwsze():
+    target = np.array([0, 0, 10, 10.0])
+    boxes = np.array([[2, 0, 12, 10], [0, 0, 10, 10], [1, 0, 11, 10]], float)
+    np.testing.assert_array_equal(best_matching_box(boxes, target), boxes[1])
+    assert best_matching_box(np.zeros((0, 4)), target) is None
+
+
+def test_summarize_alignment_better_wymaga_poprawy_ponad_0_01():
+    res = pd.DataFrame(
+        {
+            "source": ["d", "d"],
+            "lighting": "day",
+            "exposure": "normal",
+            "corrupted": "original",
+            "method": "quad",
+            "iou_box": [0.5, 0.5],
+            "iou_aligned": [0.505, 0.52],
+            "err_box": 0.1,
+            "err_aligned": 0.1,
+        }
+    )
+    assert summarize_alignment(res).loc[("all", "all"), "better"] == 0.5
+
+
+def test_boxes_by_image_prog_wlacznie():
+    preds = pd.DataFrame([pred("a", 0.25, 0, 0, 1, 1)])
+    assert list(boxes_by_image(preds, 0.25)) == ["a"]

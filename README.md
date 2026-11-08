@@ -66,6 +66,34 @@ Najważniejsze wyniki (81 tablic na wersję):
 * Już na czystych zdjęciach EasyOCR odczytuje bezbłędnie tylko 36% tablic. Typowe błędy: niebieski pasek UE
   czytany jako litera oraz mylenie I/L/1 i 5/S. To pierwsze miejsce do poprawy (bloki 5-6).
 
+**08.11.2026 (Włodarczyk)**: poprawki błędów, które zniekształcały powyższe wyniki. Wyniki bloku 2 trzeba
+policzyć ponownie po zbudowaniu nowej wersji zbioru i przetrenowaniu YOLO.
+
+* Przeciek w data1: zdjęcia tego samego auta (kilka ujęć z jednego miejsca) trafiały losowo do różnych podziałów
+  (7 numerów tablic było jednocześnie w `train` i w `val`/`test`). Teraz auto dziedziczy podział pierwszego
+  zdjęcia; zmienia to podział 8 z 290 zdjęć, reszta zbioru bez zmian. Wymaga nowej wersji zbioru na Kaggle.
+* Eksperyment liczony był też na `val`, którym YOLO wybiera `best.pt` i wczesne zatrzymanie (42 z 81 zdjęć).
+  Domyślnie jest teraz tylko `test`; czysta wersja zdjęć jest zapisywana tak samo jak zniekształcone (JPEG 95),
+  więc różnice między wersjami nie wynikają z ponownej kompresji.
+* Eksperyment nie mierzy prawdziwego złego oświetlenia: UC3M-LP (całe nocne zdjęcia) ma zamazane znaki, więc
+  zostaje tylko data1 (dzienne, 282 z 290 tablic `exposure == normal`). Wnioski o oświetleniu dotyczą tylko
+  sztucznych `brightness` i `darken`.
+* `PlateAligner` przy niskim kontraście tablicy z tłem zwracał obrys całego okna z marginesem. Po poprawce na
+  data2 (2004 tablice, ramki z etykiet): IoU 0.774 -> 0.814, błąd narożnika 0.295 -> 0.202 (sama ramka: 0.769, 0.232).
+* Ocena wyrównania obejmowała data1, gdzie "prawdziwe narożniki" to prostokąt ramki (wyrównanie mogło tam tylko
+  przegrać); teraz liczona jest tylko na źródłach z narożnikami (`alpr.dataset.with_corners`).
+* OCR doklejał napisy z ramki dealera i "PL" z paska UE (np. `SBL58012BRUTSCH`); fragmenty niższe niż 0.6
+  najwyższego są teraz pomijane (`alpr.ocr.plate_fragments`). Na wycinkach z `test` (411 czytelnych oryginałów,
+  data1 + data3) odczyt bezbłędny rośnie z 19.0% do 36.3%.
+* 16 tablic UC3M-LP ma narożniki zapisane przeciwnie do ruchu zegara, więc ich wycinki były transponowane, a błąd
+  narożnika w ocenie wyrównania zawyżony. `four_corners` porządkuje teraz narożniki (TL, TR, BR, BL) przy dowolnym
+  obrocie poniżej 90 stopni. Wymaga nowej wersji zbioru.
+* 20 wycinków AUTO.RIA miało `lines == 0` (brak informacji w źródle, wszystkie jednowierszowe); teraz `1`.
+* Wycinki z `detect_plates.py` dla `x.jpg` i `x.png` w jednym folderze nadpisywały się; nazwa zawiera teraz
+  rozszerzenie (`crops/<ścieżka>.jpg_<k>.png`).
+* Sprawdzone bez błędów: AP z `evaluate` zgodne z walidacją ultralytics na tych samych wagach (AP50 0.361 wobec
+  0.358, AP50-95 0.169 wobec 0.163), spójność `plates.csv` z etykietami YOLO, kopiami i wycinkami.
+
 ---
 
 ## Możliwe eksperymenty
@@ -148,7 +176,7 @@ razem 16584 wierszy. Z tego 1074 zdjęć (1292 tablic) to całe zdjęcia, reszta
 
 | Źródło | Tablice | Typ | Uwagi |
 |---|---|---|---|
-| [Poland Vehicle License Plate Dataset](https://www.kaggle.com/datasets/piotrstefaskiue/poland-vehicle-license-plate-dataset) | 290 (PL) | całe zdjęcia | brak podziału, losujemy 70/15/15 |
+| [Poland Vehicle License Plate Dataset](https://www.kaggle.com/datasets/piotrstefaskiue/poland-vehicle-license-plate-dataset) | 290 (PL) | całe zdjęcia | brak podziału, losujemy 70/15/15; zdjęcia tego samego auta (ten sam numer) zawsze w jednym podziale |
 | [UC3M-LP](https://github.com/ramajoballester/uc3m-lp) | 1002 (ES), 784 zdjęć | całe zdjęcia | wszystkie nocne (362) + losowe dzienne; **każda** tablica ma zamazane znaki (`*`), więc nadaje się do detekcji i testów nocnych, ale nie do metryk OCR |
 | [AUTO.RIA Numberplate OCR EU](https://github.com/ria-com/nomeroff-net) | 7000 (1710 PL + po ok. 204 z 26 krajów UE) | same wycinki | CC BY 4.0 |
 
@@ -253,7 +281,8 @@ Wyrównanie (`PlateAligner`): YOLO daje prostokątną ramkę, a tablica jest czw
 powiększonej o 15% szukamy konturu tablicy (krawędzie Canny oraz jasne tło z progiem Otsu razem
 z niebieskim paskiem UE), przybliżamy go 4 narożnikami, doprecyzowujemy je dopasowaniem prostych
 do boków i prostujemy wycinek tą samą metodą co `build_dataset.py`. Gdy kontur nie pasuje do ramki
-(IoU < 0.6) albo ma nietypowe proporcje, zostaje zwykły wycinek ramki (`align = box`).
+(IoU < 0.6), ma nietypowe proporcje albo sięga obu przeciwległych brzegów okna (to tło, nie tablica),
+zostaje zwykły wycinek ramki (`align = box`). `eval_alignment.py` pomija data1, bo jej narożniki to prostokąty ramek.
 
 Format `detections.csv` (wejście dla OCR): `image, det_id, conf, x1, y1, x2, y2, polygon, align, crop`;
 zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.
@@ -264,7 +293,8 @@ zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.
 ## OCR
 
 Wejście to `detections.csv` z `detect_plates.py`. Silnik: EasyOCR (model angielski, znaki tylko A-Z i 0-9,
-GPU, jeśli jest). Fragmenty tekstu są sklejane w kolejności czytania (tablice dwuwierszowe: górny wiersz pierwszy).
+GPU, jeśli jest). Fragmenty tekstu niższe niż 0.6 najwyższego (napisy z ramki, "PL" z paska UE) są pomijane,
+reszta jest sklejana w kolejności czytania (tablice dwuwierszowe: górny wiersz pierwszy).
 Modele EasyOCR pobierają się raz do `~/.EasyOCR/`.
 
 ```bash
@@ -287,9 +317,11 @@ więc ich odczyty nie nadają się do metryk.
 
 Osobny zbiór, na którym mierzymy cały potok. Ground truth to zdjęcia, które jednocześnie:
 są całymi zdjęciami z ramką tablicy (nie gotowymi wycinkami, więc odpada AUTO.RIA), mają czytelny tekst
-(`blurred == 0`, więc odpada UC3M-LP), są oryginałami (bez kopii z `plates.csv`) i nie były użyte do uczenia
-wag YOLO (podziały `val` i `test`; `val` służył tylko do wyboru epoki). Zostaje 81 zdjęć z data1
-(Polska, po 1 tablicy). Każde zdjęcie dostaje 20 zniekształconych wersji: `brightness` (rozjaśnienie),
+(`blurred == 0`, więc odpada UC3M-LP), są oryginałami (bez kopii z `plates.csv`) i nie były użyte przy uczeniu
+wag YOLO (domyślnie tylko `test`; `val` wybiera `best.pt` i wczesne zatrzymanie, `--splits val test` dokłada go
+świadomie). Zostaje ok. 40 zdjęć z data1 (Polska, po 1 tablicy, prawie wyłącznie dzienne), więc różnice poniżej
+kilku tablic to szum, a prawdziwego złego oświetlenia ten zbiór nie zawiera. Czysta wersja jest zapisywana tak
+samo jak zniekształcone (JPEG 95). Każde zdjęcie dostaje 20 zniekształconych wersji: `brightness` (rozjaśnienie),
 `darken` (przyciemnienie), `motion_blur` i `defocus_blur` (rozmycie), każde w sile 1-5. Zniekształcenia
 nie zmieniają geometrii, więc ramki i tekst z ground truth obowiązują we wszystkich wersjach.
 
@@ -315,7 +347,8 @@ Wersja to `clean` albo `<zniekształcenie>_<siła>`.
 | `results/experiment/<name>/plates.csv` | tablica z ground truth obok dopasowanej detekcji: `text_true`, `detected`, `iou`, `det_conf`, `align`, `crop`, `text_pred`, `conf_ocr`, `text_ok` |
 | `results/experiment/<name>/summary.csv` | odsetek wykrytych (`detected`) i bezbłędnie odczytanych (`text_ok`) tablic na wersję |
 
-Baseline (`yolo11n`, 640 px, wytrenowany lokalnie, EasyOCR bez dostrajania), 81 tablic na wersję:
+Baseline (`yolo11n`, 640 px, wytrenowany lokalnie, EasyOCR bez dostrajania), 81 tablic na wersję (`val` + `test`,
+przed poprawkami z 08.11.2026, do policzenia ponownie):
 
 | Zniekształcenie | Siła 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|

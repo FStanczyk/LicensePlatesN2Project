@@ -19,7 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 build = ["imagecorruptions==1.1.2", "scikit-image"]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "pytest-cov", "hypothesis", "ruff"]
 
 [tool.setuptools.packages.find]
 include = ["alpr*"]
@@ -29,6 +29,7 @@ include = ["alpr*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 120

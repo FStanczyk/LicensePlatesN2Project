@@ -1,13 +1,12 @@
 """Zbiór eksperymentu (Golba): czyste zdjęcia z etykietami, ich zniekształcone wersje, detekcja i OCR na wszystkich.
 
-Ground truth: całe zdjęcia z ramką i czytelnym tekstem (bez blurred), same oryginały, tylko podziały
-nieużyte do uczenia wag YOLO. Zniekształcenia nie zmieniają geometrii, więc etykiety są wspólne dla wersji.
+Ground truth: całe zdjęcia z ramką i czytelnym tekstem (bez blurred), same oryginały, tylko test (val wybiera
+best.pt i wczesne zatrzymanie YOLO). Zniekształcenia nie zmieniają geometrii, więc etykiety są wspólne dla wersji.
 
     data/experiment/images/<wersja>/<zdjęcie>.jpg   wersja: clean albo <zniekształcenie>_<siła>
     data/experiment/ground_truth.csv                jedna linia na (wersja, tablica)
 """
 
-import shutil
 from pathlib import Path, PurePosixPath
 
 import cv2
@@ -18,7 +17,7 @@ from alpr.dataset import load_plates
 from alpr.detection.metrics import BOX, match
 from alpr.geometry import box_iou
 
-SPLITS = ("val", "test")
+SPLITS = ("test",)
 CORRUPTIONS = ("brightness", "darken", "motion_blur", "defocus_blur")
 SEVERITIES = (1, 2, 3, 4, 5)
 GT_FIELDS = [
@@ -80,11 +79,8 @@ def build_experiment(
         for variant, corruption, severity in variants(corruptions):
             rel = f"images/{variant}/{name}"
             (out / rel).parent.mkdir(parents=True, exist_ok=True)
-            if severity == 0:
-                shutil.copyfile(dataset / image, out / rel)
-            else:
-                version = apply_corruption(img, corruption, severity, f"{name}:{variant}")
-                cv2.imwrite(str(out / rel), version, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            version = img if severity == 0 else apply_corruption(img, corruption, severity, f"{name}:{variant}")
+            cv2.imwrite(str(out / rel), version, [cv2.IMWRITE_JPEG_QUALITY, 95])
             rows += [
                 {
                     **plate,

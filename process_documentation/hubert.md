@@ -275,3 +275,75 @@ Cały notatnik wykonany komórka po komórce na syntetycznym zbiorze w formacie 
 ### Do zrobienia
 * uruchomić notatnik na Kaggle z GPU (pierwsze prawdziwe liczby baseline, blok 5),
 * [x] po scaleniu `refaktoryzacja` do `main`: notatnik i README klonują `main`.
+
+## 08.11.2026: testy i poprawki błędów wpływających na wyniki
+
+### Punkt wyjścia
+63 testy (3 pomijane bez extras `[build]`), brak testów m.in. dla pobierania HTTP, źródeł zbioru, `CombinedWriter`
+i skryptów. Wyniki bloku 2 (eksperyment, OCR) wyglądały podejrzanie: czysta wersja 36% odczytów, rozjaśnienie
+lepsze od czystej. Cel: testy dające zaufanie do funkcji i przegląd logiki pod kątem błędów zmieniających wyniki.
+
+### Testy (`tests/`)
+| Plik | Co sprawdza |
+|---|---|
+| `test_download_http.py` (nowy) | lokalny serwer z Range: `range_get` (ponawianie, `Retry-After`, limit 120 s), `download` (kawałki, wznawianie, przekierowanie), `RemoteFile`, `fetch_member` (CRC, kompresja, duże pole extra), `Archive` |
+| `test_sources.py` (nowy) | `build()` źródeł z atrapą writera, `select()` UC3M-LP i AUTO.RIA na syntetycznych zipach, `fetch()`, zła suma MD5 |
+| `test_writer.py` (nowy) | etykiety YOLO, zmniejszanie zdjęć, przycinanie ramek, zapis i odczyt przez `load_plates`, każde zniekształcenie |
+| `test_scripts.py` (nowy) | konwencje z CLAUDE.md i `--help` każdego skryptu |
+| `test_config.py` (nowy) | `default_dataset`, szablon `data.yaml` i metadane Kaggle |
+| pozostałe | przypadki brzegowe geometrii, metryk, wyrównania (skala, obrót, noc, szum), OCR, eksperymentu; kontrakt metod `preprocessing` (pomijany, dopóki metoda nie istnieje) i specyfikacja metryk OCR (xfail do implementacji) |
+
+Integracja z VS Code: `pythonpath = ["."]` w `pyproject.toml` (testy działają bez instalacji `alpr`),
+w `.vscode/settings.json` interpreter `.venv` i katalog roboczy testów.
+
+### Znalezione błędy i poprawki
+| Błąd | Wpływ | Poprawka |
+|---|---|---|
+| data1: podział losowany per zdjęcie, a to samo auto ma kilka niemal identycznych ujęć | 7 numerów tablic w `train` i jednocześnie w `val`/`test`, zawyżone wyniki | `PolishPlates.build`: auto dziedziczy podział pierwszego zdjęcia; losowanie bez zmian, zmienia się 8 z 290 zdjęć |
+| eksperyment na `val` + `test` | `val` wybiera `best.pt` i wczesne zatrzymanie (42 z 81 zdjęć); OCR val 23.8%, test 48.7% | `alpr.experiment.SPLITS = ("test",)` |
+| `clean` w eksperymencie kopiowane, wersje kodowane ponownie (JPEG 95) | różnica przy małych siłach częściowo z kompresji | `clean` zapisywane tak samo jak wersje |
+| `PlateAligner` przy niskim kontraście zwraca obrys całego okna z marginesem | wyrównanie gorsze niż ramka | odrzucanie konturów sięgających obu przeciwległych brzegów okna |
+| `eval_alignment` liczony też na data1, gdzie narożniki to prostokąt ramki | wyrównanie może tam tylko przegrać, zaniżony wiersz `all` | `alpr.dataset.with_corners` wewnątrz `evaluate_alignment` |
+| OCR skleja wszystkie fragmenty | doklejone napisy dealera i "PL" z paska (7 z 52 błędów na czystej wersji jest dłuższych o 2+ znaki) | `alpr.ocr.plate_fragments`: pomija fragmenty niższe niż 0.6 najwyższego |
+| `imagecorruptions` wymaga boków >= 32 px | `add_crop` wywróciłby się na niskim wycinku | dopełnienie krawędzią i przycięcie po zniekształceniu (obrazy >= 32 px bez zmian) |
+
+Ograniczenie bez poprawki w kodzie: eksperyment nie zawiera prawdziwie źle oświetlonych zdjęć (UC3M-LP ma
+zamazane znaki, data1 to 282 z 290 tablic `exposure == normal`). Opisane w README.
+
+### Wynik
+Wyrównanie na data2 (2004 tablice, ramki z etykiet, skrypt jak `eval_alignment.py`):
+
+| | IoU | błąd narożnika |
+|---|---|---|
+| sama ramka | 0.769 | 0.232 |
+| aligner przed poprawką | 0.774 | 0.295 |
+| aligner po poprawce | 0.814 | 0.202 |
+
+Testy: 327 przechodzi, 35 pomijanych (metody `preprocessing` do implementacji), 5 xfail (metryki OCR).
+`ruff check` i `ruff format --check` przechodzą. Golden testy zbioru przechodzą (syntetyczne źródła nie mają
+powtórzonych aut), ale prawdziwy zbiór zmieni się w 8 zdjęciach data1.
+
+### Stan na koniec dnia
+* [x] testy i integracja z VS Code
+* [x] poprawki w kodzie, README zaktualizowane
+* [ ] filtr fragmentów OCR niesprawdzony na prawdziwych odczytach (brak EasyOCR i wycinków lokalnie)
+* [ ] nowa wersja zbioru na Kaggle, ponowny trening YOLO i ponowny eksperyment
+
+### Dalsze szukanie błędów (EasyOCR, pytest-cov, hypothesis)
+Doinstalowane w `.venv`: `easyocr` (modele w `~/.EasyOCR/`), `pytest-cov`, `hypothesis` (dopisane do extras `dev`).
+Pokrycie `alpr/` testami: 99%. Nowy plik `tests/test_properties.py` (niezmienniki geometrii, metryk i OCR).
+
+| Sprawdzenie | Wynik |
+|---|---|
+| audyt `data/combined` (ramki, wielokąty, etykiety YOLO, kopie, wycinki, `exposure`) | 16 tablic data2 z narożnikami przeciwnie do zegara (transponowane wycinki), 20 wycinków data3 z `lines == 0`; reszta spójna |
+| EasyOCR na 411 wycinkach z `test` (data1 + data3) | bez filtra 19.0%, z filtrem fragmentów 0.6: 36.3% (progi 0.5-0.8 w granicach 1 pp); reszta błędów to pomyłki modelu (0/O, 7/Z, G/6, W/H) |
+| `evaluate` a `YOLO.val` (wagi z 2 epok na CPU, `test`, 320 px) | AP50 0.361 / 0.358, AP50-95 0.169 / 0.163: zgodne |
+| potok end-to-end (`train_yolo`, `build_experiment`, `run_experiment`, `eval_alignment --preds`, `detect_plates --images`, `ocr_plates`) | działa; `crop_name` gubił rozszerzenie, więc `x.jpg` i `x.png` nadpisywały wycinki |
+
+Poprawki: `four_corners` porządkuje narożniki (kierunek z pola, górny bok z dłuższej pary), `AutoRia.build`
+`lines` co najmniej 1, `crop_name` z rozszerzeniem. Testy: 350 przechodzi.
+
+### Do zrobienia (moja część)
+* uzgodnić ze Stańczykiem nową wersję zbioru (`build_dataset.py`, `kaggle datasets version`) (blok 6),
+* przetrenować YOLO na nowym zbiorze i policzyć ponownie `eval_detection.py`, `eval_alignment.py` (blok 6),
+* z Golbą: ponowny `build_experiment.py --force` i `run_experiment.py --force`, sprawdzić wpływ filtra OCR (blok 6).

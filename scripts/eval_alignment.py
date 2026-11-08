@@ -7,7 +7,7 @@ Użycie:
     python3 scripts/eval_alignment.py --split test --examples 30
 
 Metryki: IoU z prawdziwym czworokątem i błąd narożnika w wysokościach tablicy. Narożniki z perspektywą
-ma tylko data2 (w data1 są prostokąty), dlatego wyniki są też osobno dla każdego źródła.
+ma tylko data2; w data1 są prostokąty ramek, więc te tablice są pomijane (alpr.dataset.with_corners).
 
 Wynik w results/alignment_eval/<name>/: plates.csv, summary.csv, examples/ (ramka, wyrównanie, prawda).
 """
@@ -42,7 +42,7 @@ def main() -> int:
     examples = out / "examples" if args.examples else None
     (examples or out).mkdir(parents=True, exist_ok=True)
 
-    res = evaluate_alignment(df[df.polygon.notna()], dataset, PlateAligner(), pred_boxes, examples, args.examples)
+    res = evaluate_alignment(df, dataset, PlateAligner(), pred_boxes, examples, args.examples)
     if res.empty:
         print("Brak tablic do oceny")
         return 1

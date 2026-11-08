@@ -32,6 +32,7 @@ FIELDS = [
     "crop",
 ]
 SPLITS = ["train", "val", "test"]
+BOX_ONLY_SOURCES = ("data1",)
 
 
 def normalize_text(text: str) -> str:
@@ -70,6 +71,11 @@ def add_derived(df: pd.DataFrame) -> pd.DataFrame:
         source=df.plate_id.str.split("_").str[0],
         corrupted=np.where(df.artificial_corruption == "none", "original", "corrupted"),
     )
+
+
+def with_corners(df: pd.DataFrame) -> pd.DataFrame:
+    """Tablice z prawdziwymi 4 narożnikami; w źródłach z BOX_ONLY_SOURCES polygon to tylko prostokąt ramki."""
+    return df[df.polygon.notna() & ~df.source.isin(BOX_ONLY_SOURCES)]
 
 
 def parse_polygon(text: str) -> np.ndarray:

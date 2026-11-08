@@ -2,15 +2,15 @@
 """Buduje zbiór eksperymentu: czyste zdjęcia z etykietami (ground truth) i ich zniekształcone wersje.
 
 Użycie:
-    python3 scripts/build_experiment.py                         # val + test, 4 zniekształcenia x siła 1-5
-    python3 scripts/build_experiment.py --splits test --corruptions darken brightness
+    python3 scripts/build_experiment.py                         # test, 4 zniekształcenia x siła 1-5
+    python3 scripts/build_experiment.py --splits val test --corruptions darken brightness
     python3 scripts/build_experiment.py --force                 # zbuduj od nowa
 
 Wymaga pip install -e ".[build]" (imagecorruptions). Bierze tylko oryginalne całe zdjęcia z czytelnym
-tekstem (bez blurred, czyli bez UC3M-LP) z podziałów nieużytych do uczenia wag YOLO.
+tekstem (bez blurred, czyli bez UC3M-LP), domyślnie tylko z test (val wybiera best.pt przy treningu YOLO).
 
 Wynik w --out (domyślnie data/experiment):
-    images/clean/*.jpg                    kopie oryginałów
+    images/clean/*.jpg                    oryginały zapisane tak samo jak wersje (JPEG 95)
     images/<zniekształcenie>_<siła>/*.jpg  te same zdjęcia po zniekształceniu
     ground_truth.csv                      variant, artificial_corruption, artificial_severity, image, source_image,
                                           plate_id, split, text, country, exposure, x1, y1, x2, y2, polygon
@@ -24,12 +24,13 @@ from pathlib import Path
 from alpr.config import EXPERIMENT, default_dataset
 from alpr.dataset import SPLITS
 from alpr.experiment import CORRUPTIONS, build_experiment
+from alpr.experiment import SPLITS as EXPERIMENT_SPLITS
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", type=Path, default=default_dataset(), help="katalog zbioru")
-    parser.add_argument("--splits", nargs="+", default=["val", "test"], choices=SPLITS)
+    parser.add_argument("--splits", nargs="+", default=list(EXPERIMENT_SPLITS), choices=SPLITS)
     parser.add_argument("--corruptions", nargs="+", default=list(CORRUPTIONS))
     parser.add_argument("--out", type=Path, default=EXPERIMENT)
     parser.add_argument("--force", action="store_true", help="usuń istniejący zbiór i zbuduj od nowa")
