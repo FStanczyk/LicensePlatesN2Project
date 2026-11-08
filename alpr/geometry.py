@@ -14,8 +14,19 @@ def order_corners(points: np.ndarray) -> np.ndarray:
 
 
 def four_corners(points: np.ndarray) -> np.ndarray:
-    """4 punkty bez zmian, większy wielokąt (5-6 punktów w data2) sprowadzony do narożników."""
-    return points if len(points) == 4 else points[_corner_index(points)]
+    """Narożniki od lewego górnego zgodnie z ruchem wskazówek zegara; górny bok to wyżej leżący z dłuższej pary.
+
+    Wielokąt z 5-6 punktami (data2) jest najpierw sprowadzany do 4 narożników. Działa dla obrotów poniżej 90 stopni,
+    także tam, gdzie order_corners zawodzi (ok. 45 stopni) i dla adnotacji zapisanych przeciwnie do zegara.
+    """
+    quad = points if len(points) == 4 else points[_corner_index(points)]
+    x, y = quad[:, 0], quad[:, 1]
+    if np.dot(x, np.roll(y, -1)) - np.dot(np.roll(x, -1), y) < 0:
+        quad = quad[[0, 3, 2, 1]]
+    sides = np.linalg.norm(np.roll(quad, -1, axis=0) - quad, axis=1)
+    pair = [0, 2] if sides[0] + sides[2] >= sides[1] + sides[3] else [1, 3]
+    top = min(pair, key=lambda i: quad[i, 1] + quad[(i + 1) % 4, 1])
+    return np.roll(quad, -top, axis=0)
 
 
 def box_corners(box: np.ndarray) -> np.ndarray:

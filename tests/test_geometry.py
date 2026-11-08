@@ -11,10 +11,29 @@ def test_order_corners_niezalezne_od_kolejnosci():
     np.testing.assert_array_equal(order_corners(shuffled), QUAD)
 
 
-def test_four_corners_zostawia_4_punkty_w_kolejnosci_z_adnotacji():
-    reversed_quad = QUAD[::-1].astype(float)
-    np.testing.assert_array_equal(four_corners(reversed_quad), reversed_quad)
-    assert four_corners(reversed_quad).dtype == np.float64
+def test_four_corners_porzadkuje_adnotacje_przeciwnie_do_zegara():
+    ccw = QUAD[[0, 3, 2, 1]].astype(float)
+    np.testing.assert_array_equal(four_corners(ccw), QUAD)
+    np.testing.assert_array_equal(four_corners(QUAD[[2, 3, 0, 1]].astype(float)), QUAD)
+    assert four_corners(ccw).dtype == np.float64
+
+
+def test_four_corners_poprawna_kolejnosc_bez_zmian():
+    np.testing.assert_array_equal(four_corners(QUAD.astype(float)), QUAD)
+
+
+@pytest.mark.parametrize("angle", [-60, -45, -30, 0, 30, 45, 60])
+def test_four_corners_obrocona_tablica(angle):
+    import cv2
+
+    t = np.deg2rad(angle)
+    rot = np.array([[np.cos(t), -np.sin(t)], [np.sin(t), np.cos(t)]])
+    plate = np.array([[-50, -10], [50, -10], [50, 10], [-50, 10]], float) @ rot.T + 200
+    for start in range(4):
+        for order in (plate, plate[::-1]):
+            q = four_corners(np.roll(order, start, axis=0))
+            np.testing.assert_allclose(q, plate)
+    assert cv2.contourArea(four_corners(plate).astype(np.float32)) > 0
 
 
 def test_four_corners_redukuje_wielokat_do_narozników():
@@ -55,3 +74,82 @@ def test_polygon_iou_zgodne_z_box_iou_dla_prostokatow():
     a, b = np.array([0, 0, 10, 10]), np.array([5, 0, 15, 10])
     assert polygon_iou(box_corners(a), box_corners(b)) == pytest.approx(box_iou(a, b))
     assert polygon_iou(QUAD, QUAD) == pytest.approx(1.0)
+
+
+def random_boxes(n: int, seed: int = 0) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    xy = rng.uniform(0, 100, (n, 2))
+    return np.hstack([xy, xy + rng.uniform(1, 50, (n, 2))])
+
+
+def test_box_iou_symetryczne_i_w_przedziale_0_1():
+    boxes = random_boxes(40)
+    for a in boxes:
+        for b in boxes[:10]:
+            iou = box_iou(a, b)
+            assert 0.0 <= iou <= 1.0
+            assert iou == pytest.approx(box_iou(b, a))
+
+
+def test_box_iou_ramka_wewnatrz_i_stykajace_sie():
+    assert box_iou(np.array([0, 0, 10, 10.0]), np.array([0, 0, 5, 5.0])) == pytest.approx(0.25)
+    assert box_iou(np.array([0, 0, 10, 10.0]), np.array([10, 0, 20, 10.0])) == 0.0
+
+
+def test_box_iou_zgodne_z_polygon_iou_na_losowych_ramkach():
+    boxes = random_boxes(20, seed=1)
+    for a, b in zip(boxes[:-1], boxes[1:], strict=True):
+        assert polygon_iou(box_corners(a), box_corners(b)) == pytest.approx(box_iou(a, b), abs=1e-4)
+
+
+def test_polygon_iou_rozlaczne_zawarte_symetryczne():
+    big = box_corners(np.array([0, 0, 20, 20]))
+    small = box_corners(np.array([5, 5, 15, 15]))
+    far = box_corners(np.array([100, 100, 110, 110]))
+    assert polygon_iou(big, far) == 0.0
+    assert polygon_iou(big, small) == pytest.approx(0.25)
+    assert polygon_iou(QUAD, big) == pytest.approx(polygon_iou(big, QUAD))
+
+
+@pytest.mark.parametrize("angle", [-20, -5, 0, 5, 20])
+def test_order_corners_obrocony_prostokat(angle):
+    import cv2
+
+    pts = cv2.boxPoints(((100, 60), (80, 20), angle)).astype(np.float32)
+    ordered = order_corners(pts[::-1])
+    tl, tr, br, bl = ordered
+    assert tl[0] < tr[0] and bl[0] < br[0]
+    assert tl[1] < bl[1] and tr[1] < br[1]
+    assert np.linalg.norm(tr - tl) == pytest.approx(80, abs=0.5)
+    assert ordered.dtype == np.float32
+
+
+def test_four_corners_szesciokat_z_data2():
+    hexagon = np.array([[20, 20], [80, 22], [100, 30], [98, 60], [40, 62], [18, 50]], float)
+    corners = four_corners(hexagon)
+    assert corners.shape == (4, 2)
+    assert corners.tolist() == [[20, 20], [100, 30], [98, 60], [18, 50]]
+
+
+def test_warp_wymiary_z_dluzszych_bokow():
+    img = np.zeros((100, 200, 3), np.uint8)
+    poly = np.array([[10, 10], [110, 10], [100, 50], [20, 40]], np.float32)
+    out = warp(img, poly)
+    assert out.shape == (41, 100, 3) and out.dtype == np.uint8
+
+
+def test_warp_zachowuje_kolor_i_kanaly():
+    img = np.full((60, 80, 3), (10, 20, 30), np.uint8)
+    out = warp(img, np.array([[5, 5], [70, 8], [68, 40], [6, 38]], np.float32))
+    assert (out == (10, 20, 30)).all()
+    gray = warp(img[:, :, 0], box_corners(np.array([0, 0, 40, 20])))
+    assert gray.shape == (20, 40)
+
+
+def test_warp_kolejnosc_naroznikow_ma_znaczenie():
+    img = np.zeros((40, 40, 3), np.uint8)
+    img[:, :20] = 255
+    poly = box_corners(np.array([0, 0, 39, 39]))
+    assert warp(img, poly)[:, 0].mean() == 255
+    mirrored = poly[[1, 0, 3, 2]]
+    assert warp(img, mirrored)[:, 0].mean() == 0

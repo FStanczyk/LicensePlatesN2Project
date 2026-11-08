@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from alpr.dataset import format_polygon, parse_polygon
+from alpr.dataset import format_polygon, parse_polygon, with_corners
 from alpr.detection.align import AlignedPlate, PlateAligner
 from alpr.detection.detector import PlateDetector
 from alpr.detection.metrics import BOX, best_matching_box, corner_error
@@ -38,9 +38,9 @@ def predict_boxes(detector: PlateDetector, images: list[str], base: Path) -> pd.
 
 
 def crop_name(rel: str, k: int, common: str) -> str:
-    """crops/<ścieżka względem common z "/" zamienionym na "__">_<k>.png."""
-    stem = PurePosixPath(rel).relative_to(common).with_suffix("").as_posix()
-    return f"crops/{stem.replace('/', '__')}_{k}.png"
+    """crops/<ścieżka względem common, "/" -> "__", z rozszerzeniem>_<k>.png; x.jpg i x.png się nie nadpisują."""
+    name = PurePosixPath(rel).relative_to(common).as_posix()
+    return f"crops/{name.replace('/', '__')}_{k}.png"
 
 
 def crop_plates(
@@ -91,9 +91,9 @@ def evaluate_alignment(
     examples: Path | None = None,
     n_examples: int = 0,
 ) -> pd.DataFrame:
-    """Ramka a wyrównanie względem narożników z plates.csv; pred_boxes: ramki detektora zamiast etykiet."""
+    """Ramka a wyrównanie względem narożników (with_corners); pred_boxes: ramki detektora zamiast etykiet."""
     rows = []
-    groups = dict(tuple(plates.groupby("image")))
+    groups = dict(tuple(with_corners(plates).groupby("image")))
     for image, img in read_images(sorted(groups), dataset):
         for r in groups[image].itertuples():
             gt = parse_polygon(r.polygon)

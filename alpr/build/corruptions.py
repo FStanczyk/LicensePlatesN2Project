@@ -21,6 +21,7 @@ corruptions.gaussian = lambda img, sigma=1, multichannel=None, **kw: _gaussian(
 )
 warnings.filterwarnings("ignore", module="imagecorruptions")
 
+MIN_SIDE = 32
 CORRUPTIONS = [
     "brightness",
     "darken",
@@ -41,13 +42,18 @@ def darken(img: np.ndarray, severity: int) -> np.ndarray:
 
 
 def apply_corruption(img: np.ndarray, name: str, severity: int, key: str) -> np.ndarray:
-    """Zniekształcenie name o sile 1-5, losowość powtarzalna na podstawie key; img w BGR."""
+    """Zniekształcenie name o sile 1-5, losowość powtarzalna na podstawie key; img w BGR.
+
+    imagecorruptions wymaga boków >= MIN_SIDE: mniejszy obraz jest dopełniany krawędzią i po zniekształceniu przycinany.
+    """
     if name == "darken":
         return darken(img, severity)
     np.random.seed(zlib.crc32(key.encode()))
-    rgb = np.ascontiguousarray(img[:, :, ::-1])
+    h, w = img.shape[:2]
+    pad = ((0, max(0, MIN_SIDE - h)), (0, max(0, MIN_SIDE - w)), (0, 0))
+    rgb = np.ascontiguousarray(np.pad(img[:, :, ::-1], pad, mode="edge"))
     out = corrupt(rgb, corruption_name=name, severity=severity)
-    return np.ascontiguousarray(out[:, :, ::-1])
+    return np.ascontiguousarray(out[:h, :w, ::-1])
 
 
 def add_corruption(img: np.ndarray, key: str) -> tuple[np.ndarray, str, int]:

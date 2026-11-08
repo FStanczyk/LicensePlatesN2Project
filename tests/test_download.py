@@ -131,3 +131,63 @@ def test_fetch_kaggle_brak_dostepu(kaggle, monkeypatch):
     monkeypatch.setattr(dl, "_kaggle_api_download", api_forbidden)
     with pytest.raises(PermissionError, match="Sharing"):
         fetch_kaggle(tmp_path / "combined")
+
+
+def test_fetch_kaggle_inny_blad_http_nie_probuje_api(kaggle, monkeypatch):
+    tmp_path, calls, _ = kaggle
+
+    def server_error(*_):
+        raise urllib.error.HTTPError("u", 500, "Server Error", {}, None)
+
+    monkeypatch.setattr(dl, "download", server_error)
+    monkeypatch.setattr(dl, "_kaggle_api_download", lambda: calls.append("api"))
+    with pytest.raises(urllib.error.HTTPError):
+        fetch_kaggle(tmp_path / "combined")
+    assert calls == []
+
+
+def test_fetch_kaggle_inny_blad_api_przechodzi_dalej(kaggle, monkeypatch):
+    tmp_path, _, _ = kaggle
+
+    def unauthorized(*_):
+        raise urllib.error.HTTPError("u", 401, "Unauthorized", {}, None)
+
+    def api_error():
+        raise OSError("brak tokenu")
+
+    monkeypatch.setattr(dl, "download", unauthorized)
+    monkeypatch.setattr(dl, "_kaggle_api_download", api_error)
+    with pytest.raises(OSError, match="brak tokenu"):
+        fetch_kaggle(tmp_path / "combined")
+
+
+def test_fetch_kaggle_podmienia_stary_zbior(kaggle, monkeypatch):
+    tmp_path, _, fake_zip = kaggle
+    (tmp_path / "combined").mkdir()
+    (tmp_path / "combined" / "stary.txt").touch()
+    (tmp_path / "combined.tmp").mkdir()
+    (tmp_path / "combined.tmp" / "smiec.txt").touch()
+    monkeypatch.setattr(dl, "download", fake_zip)
+    fetch_kaggle(tmp_path / "combined")
+    assert not (tmp_path / "combined" / "stary.txt").exists()
+    assert not (tmp_path / "combined" / "smiec.txt").exists()
+    assert not (tmp_path / "combined.tmp").exists()
+    assert (tmp_path / "combined" / "plates.csv").exists()
+
+
+def test_extract_pomija_katalogi_i_wiele_plikow(tmp_path):
+    with zipfile.ZipFile(tmp_path / "a.zip", "w") as zf:
+        zf.writestr("dir/", b"")
+        for i in range(30):
+            zf.writestr(f"dir/sub{i % 3}/{i}.txt", str(i))
+    extract(tmp_path / "a.zip", tmp_path / "out", {"dir/": ""})
+    files = [p for p in (tmp_path / "out").rglob("*") if p.is_file()]
+    assert len(files) == 30
+    assert (tmp_path / "out" / "sub2" / "29.txt").read_text() == "29"
+
+
+def test_missing_files_komplet(tmp_path):
+    (tmp_path / "plates.csv").write_text("sample_type,image,crop\nplate_crop,,ocr/b.png\n")
+    (tmp_path / "ocr").mkdir()
+    (tmp_path / "ocr" / "b.png").touch()
+    assert missing_files(tmp_path)[1] == []

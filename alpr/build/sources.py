@@ -87,7 +87,9 @@ class PolishPlates(SourceDataset):
         extract(zip_path, self.dir, {"photos/photos/": "photos/", "annotations.xml": "annotations.xml"})
 
     def build(self, writer: CombinedWriter) -> None:
+        """Zdjęcia tego samego auta (wspólny numer tablicy) trafiają do podziału pierwszego z nich."""
         rng = random.Random(SEED)
+        split_of: dict[str, str] = {}
         for image in ET.parse(self.dir / "annotations.xml").getroot().iter("image"):
             img = cv2.imread(str(self.photos / image.get("name")))
             plates = []
@@ -105,8 +107,11 @@ class PolishPlates(SourceDataset):
                         "lines": 1,
                     }
                 )
-            key = f"{self.name}_{Path(image.get('name')).stem}"
-            writer.add_photo(key, split_for(rng, 0.15, 0.15), img, plates)
+            split = split_for(rng, 0.15, 0.15)
+            texts = [p["text"] for p in plates if p["text"]]
+            split = next((split_of[t] for t in texts if t in split_of), split)
+            split_of.update(dict.fromkeys(texts, split))
+            writer.add_photo(f"{self.name}_{Path(image.get('name')).stem}", split, img, plates)
 
 
 class SampledSource(SourceDataset):
@@ -270,7 +275,7 @@ class AutoRia(SampledSource):
                 "blurred": 0,
                 "country": plate["country"],
                 "lighting": "unknown",
-                "lines": plate["lines"] or 1,
+                "lines": max(1, int(plate["lines"] or 1)),
             }
             writer.add_crop(f"{self.name}_{i:05d}", plate["file"].split("/")[0], img, fields)
 

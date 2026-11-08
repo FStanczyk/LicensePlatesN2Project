@@ -93,11 +93,13 @@ class PlateAligner:
         min_area = 0.3 * (target[2] - target[0]) * (target[3] - target[1])
 
         best, best_iou = None, self.min_iou
+        h, w = small.shape[:2]
         for mask in plate_masks(small):
             contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             for contour in contours:
                 hull = cv2.convexHull(contour)
-                if cv2.contourArea(hull) < min_area:
+                x, y, bw, bh = cv2.boundingRect(hull)
+                if cv2.contourArea(hull) < min_area or (bw >= w - 2 and x <= 1) or (bh >= h - 2 and y <= 1):
                     continue
                 approx = cv2.approxPolyDP(hull, 0.03 * cv2.arcLength(hull, True), True)
                 if len(approx) == 4:

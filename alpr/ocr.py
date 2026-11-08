@@ -19,6 +19,7 @@ from alpr.dataset import normalize_text
 Engine = Callable[[np.ndarray], tuple[str, float]]
 
 ALLOWLIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+MIN_HEIGHT = 0.6
 
 
 @cache
@@ -42,11 +43,18 @@ def reading_order(boxes: list[np.ndarray]) -> list[int]:
     return [i for line in lines for i in sorted(line, key=lambda i: centers[i][0])]
 
 
+def plate_fragments(boxes: list[np.ndarray], min_height: float = MIN_HEIGHT) -> list[int]:
+    """Fragmenty o wysokości >= min_height najwyższego; niższe to napisy z ramki albo "PL" z paska UE."""
+    heights = [np.ptp(b[:, 1]) for b in boxes]
+    return [i for i, h in enumerate(heights) if h >= min_height * max(heights)]
+
+
 def easyocr_engine(crop: np.ndarray) -> tuple[str, float]:
-    """Fragmenty tekstu sklejane w kolejności czytania; pewność to średnia ważona długością."""
+    """Fragmenty tablicy (plate_fragments) sklejane w kolejności czytania; pewność to średnia ważona długością."""
     found = easyocr_reader().readtext(crop, allowlist=ALLOWLIST, detail=1, paragraph=False)
     if not found:
         return "", 0.0
+    found = [found[i] for i in plate_fragments([np.asarray(box, np.float32) for box, _, _ in found])]
     boxes = [np.asarray(box, np.float32) for box, _, _ in found]
     parts = [found[i] for i in reading_order(boxes)]
     text = "".join(t for _, t, _ in parts)
