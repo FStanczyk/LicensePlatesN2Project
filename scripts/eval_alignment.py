@@ -5,6 +5,9 @@ Użycie:
     python3 scripts/eval_alignment.py                                         # ramki z etykiet
     python3 scripts/eval_alignment.py --preds results/detection_eval/baseline/predictions.csv   # z detektora
     python3 scripts/eval_alignment.py --split test --examples 30
+    python3 scripts/eval_alignment.py --preds results/detection_eval/pose/predictions.csv --name pose   # YOLO-pose
+
+Predykcje YOLO-pose (kolumna polygon w predictions.csv) dają narożniki modelu zamiast PlateAligner (method = pose).
 
 Metryki: IoU z prawdziwym czworokątem i błąd narożnika w wysokościach tablicy. Narożniki z perspektywą
 ma tylko data2; w data1 są prostokąty ramek, więc te tablice są pomijane (alpr.dataset.with_corners).
@@ -23,6 +26,7 @@ from alpr.dataset import SPLITS, load_plates
 from alpr.detection import PlateAligner
 from alpr.detection.metrics import boxes_by_image, summarize_alignment
 from alpr.detection.pipeline import evaluate_alignment
+from alpr.detection.pose import corners_by_image
 
 
 def main() -> int:
@@ -37,12 +41,14 @@ def main() -> int:
 
     dataset = args.dataset.resolve()
     df = load_plates(dataset, sample_type="full_photo", split=None if args.split == "all" else args.split)
-    pred_boxes = boxes_by_image(pd.read_csv(args.preds), args.conf) if args.preds else None
+    preds = pd.read_csv(args.preds) if args.preds else None
+    pred_boxes = boxes_by_image(preds, args.conf) if preds is not None else None
+    pred_corners = corners_by_image(preds, args.conf) if preds is not None else None
     out = RESULTS / "alignment_eval" / (args.name or ("detector" if args.preds else "gt_boxes"))
     examples = out / "examples" if args.examples else None
     (examples or out).mkdir(parents=True, exist_ok=True)
 
-    res = evaluate_alignment(df, dataset, PlateAligner(), pred_boxes, examples, args.examples)
+    res = evaluate_alignment(df, dataset, PlateAligner(), pred_boxes, examples, args.examples, pred_corners)
     if res.empty:
         print("Brak tablic do oceny")
         return 1

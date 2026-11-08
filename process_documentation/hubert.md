@@ -347,3 +347,86 @@ Poprawki: `four_corners` porządkuje narożniki (kierunek z pola, górny bok z d
 * uzgodnić ze Stańczykiem nową wersję zbioru (`build_dataset.py`, `kaggle datasets version`) (blok 6),
 * przetrenować YOLO na nowym zbiorze i policzyć ponownie `eval_detection.py`, `eval_alignment.py` (blok 6),
 * z Golbą: ponowny `build_experiment.py --force` i `run_experiment.py --force`, sprawdzić wpływ filtra OCR (blok 6).
+
+## 08.11.2026: klasyczny detektor, próg F1, CLAHE w alignerze, YOLO-pose
+
+### Punkt wyjścia
+Pytanie zespołu: czy prosty algorytm bez uczenia może zastąpić YOLO. Do tego słabości mojej części z przeglądu:
+stały próg `conf` 0.25, aligner gorszy od ramki przy niedoświetleniu i w nocy, brak pomiaru czasu.
+
+### Decyzje
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Klasyczny detektor (`alpr/detection/classical.py`) | black-hat + Sobel, domknięcie w 3 skalach, filtr proporcji, weryfikacja znaków (plamy po Otsu w rzędzie) | sama morfologia: AP50 0.06 na `val` (za dużo fałszywych kandydatów); weryfikacja znaków: 0.256 |
+| Strojenie | tylko na `val`, wynik na `test` | bez dopasowania do testu |
+| Powiększanie ramki klasycznej | nie | na `val` każde powiększenie obniża AP50 (do 0.066) |
+| Próg pewności | `best_conf` (maksimum F1), drukowany przez `eval_detection.py` | dobierany na `val`, podawany jako `--conf` na `test` |
+| CLAHE w alignerze | `PlateAligner(clahe=True)` domyślnie | niedoświetlenie: IoU 0.810 -> 0.828 (ramka 0.817), mniej `box` (703 -> 550) |
+| YOLO-pose | `train_yolo.py --pose`: eksport `alpr.detection.pose` (narożniki data2, data1 z widocznością 0), `PlateDetector` zwraca narożniki, `crop_plates` i `evaluate_alignment` ich używają | aligner konturowy w nocy nadal gorszy od ramki (błąd narożnika 0.179 wobec 0.148); model uczony nie zależy od progów jasności |
+
+### Wynik
+Klasyczny detektor na `test` (próg 0.49 z `val`, CPU, ok. 40 ms/zdjęcie, `results/detection_eval/classical/`):
+
+| Grupa | P | R | F1 | AP50 |
+|---|---|---|---|---|
+| wszystkie | 0.706 | 0.340 | 0.459 | 0.344 |
+| data1 | 0.824 | 0.718 | 0.767 | 0.691 |
+| data2 dzień | 0.693 | 0.307 | 0.426 | 0.301 |
+| data2 noc | 0.514 | 0.153 | 0.235 | 0.166 |
+
+Wniosek: klasyka nie zastąpi YOLO (na `val` YOLO: P 0.969, R 0.943), działa tylko na prostych zdjęciach z bliska.
+Jest punktem odniesienia do raportu: pokazuje, jak bardzo oświetlenie szkodzi metodom bez uczenia.
+Testy: 378 przechodzi (nowe `test_classical.py`, `test_pose.py`, `best_conf` w `test_metrics.py`), pokrycie 99%.
+YOLO-pose sprawdzony na CPU (`yolo11n-pose.pt`, 2 epoki, 30% danych, 320 px, `--workers 4 --cache ram`, ok. 1 min):
+predykcje z narożnikami, `eval_alignment.py --preds` dopasowuje 91 tablic z `method = pose`; narożniki po 2 epokach
+jeszcze bezużyteczne (IoU 0.18), pełny trening na GPU (blok 6). Nowa flaga `train_yolo.py --cache`.
+
+## 08.11.2026: optymalizacja obliczeń detekcji i wyrównania
+
+### Punkt wyjścia
+Cel: przyspieszyć moją część (metryki, wyrównanie, przebiegi po zdjęciach) bez zmiany architektury, interfejsów
+i wyników. Najpierw profil (cProfile, mediana z kilku powtórzeń, `data/combined`, CPU 8 rdzeni):
+
+| Przebieg | Czas | Główny koszt |
+|---|---|---|
+| `evaluate_alignment`, 2004 tablice | 28.3 s | `imread` 59%, `find_corners` 26% |
+| `crop_plates` na `test` (bez modelu) | 7.2 s | `imread` 55%, wyrównanie 37% |
+| `evaluate_by_group` na `test` | 3.4 s | `match` i `box_iou` parami, 28 wywołań `evaluate` z sortowaniem w pandas |
+| `match_results` (1701 tablic) | 2.5 s | `iterrows` i indeksowanie wierszy |
+
+### Decyzje
+| Zmiana | Decyzja | Powód |
+|---|---|---|
+| `geometry.box_iou_matrix` i metryki na macierzy IoU (`image_matches`, `greedy_match`, `desc_order`) | wdrożone | dopasowania raz na zdjęcie dla 10 progów i wszystkich grup; kolejność jak `sort_values` (remisy bez zmian) |
+| `read_images`: wczytywanie w tle (8 wątków, najwyżej 16 zdjęć w pamięci) | wdrożone | cv2 zwalnia GIL; kolejność wierszy bez zmian |
+| `experiment.match_results`: macierz IoU i `to_dict` zamiast `iterrows` | wdrożone | ta sama pętla, wynik co do bitu |
+| wczesne odrzucanie konturów w `find_corners` | odrzucone | tylko 5% |
+| procesy w `evaluate_alignment` | odrzucone | 11.3 -> 7.8 s kosztem złożoności (przykłady osobno, `forkserver`) |
+| wsadowe `predict` YOLO | odrzucone | zmienia wyniki: dopełnienie do kwadratu przy różnych kształtach, różnice do 0.0066 przy tych samych |
+| klasyczny detektor (pamięć `char_score`, NMS wsadowy, numpy w `char_score`) | odrzucone | każda zmiana poniżej 4%; tylko 3.3% kandydatów powtarza się między skalami |
+| `refine_quad` bez pętli, wsadowe `best_match` | odrzucone | inna kolejność sumowania float32 i mieszane float32/float64 mogłyby zmienić wynik przy znikomym zysku |
+
+### Wynik
+Wyniki identyczne co do bitu ze starą wersją (`assert_frame_equal`, `check_exact`) na prawdziwym zbiorze:
+metryki (test, val, także syntetyczne predykcje z remisami), `plates.csv`, `best_conf`, `evaluate_alignment`
+(IoU wyrównania 0.820, jak wcześniej), `crop_plates` (753 wycinki PNG bajt w bajt), `match_results`.
+
+| Przebieg | Przed | Po |
+|---|---|---|
+| `evaluate_by_group` (test) | 3.17 s | 0.08 s |
+| `evaluate_by_group` (100 ramek na zdjęcie, z remisami) | 7.64 s | 0.29 s |
+| `match_results` | 2.27 s | 0.11 s |
+| `evaluate_alignment` (2004 tablice) | 26.9 s | 11.0 s |
+| `crop_plates` (test, bez modelu) | 7.2 s | 3.5 s |
+
+Testy: nowy `tests/test_rownowaznosc.py` (stare implementacje jako wzorzec na losowych danych z remisami i NaN),
+testy `box_iou_matrix`, `desc_order`, `greedy_match`, `image_matches`, `read_images` (kolejność, limit pamięci).
+`pytest`: 435 przechodzi, 35 pominiętych, 5 xfail; `ruff` przechodzi. Trening YOLO bez zmian (to pętla ultralytics).
+
+### Stan na koniec dnia
+* [x] profil, raport, wdrożenie punktów 1-3, testy, README
+* [ ] commit i wypchnięcie
+
+### Do zrobienia (moja część)
+* `eval_detection.py` na nowych wagach: czas na zdjęcie liczy teraz wczytywanie w tle, porównywać tylko z nowymi pomiarami (blok 6),
+* uprzedzić Golbę o zmianie `match_results` w `alpr/experiment.py` (blok 6).

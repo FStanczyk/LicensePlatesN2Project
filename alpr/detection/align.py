@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from alpr.geometry import box_corners, box_iou, order_corners, warp
+from alpr.geometry import box_corners, box_iou, four_corners, order_corners, warp
 
 
 @dataclass(frozen=True)
@@ -18,6 +18,19 @@ class AlignedPlate:
     def from_box(cls, img: np.ndarray, box: np.ndarray) -> "AlignedPlate":
         poly = box_corners(np.asarray(box, dtype=np.float32))
         return cls(warp(img, poly), poly, "box")
+
+    @classmethod
+    def from_corners(cls, img: np.ndarray, corners: np.ndarray) -> "AlignedPlate":
+        """Narożniki z YOLO-pose (porządkowane four_corners)."""
+        poly = four_corners(np.asarray(corners, dtype=np.float32)).astype(np.float32)
+        return cls(warp(img, poly), poly, "pose")
+
+
+def equalize(bgr: np.ndarray, clip_limit: float = 2.0) -> np.ndarray:
+    """CLAHE na kanale L (LAB): wyrównuje kontrast tablicy przy niedoświetleniu i prześwietleniu."""
+    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
+    lab[:, :, 0] = cv2.createCLAHE(clip_limit, (4, 4)).apply(lab[:, :, 0])
+    return cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
 
 def plate_masks(bgr: np.ndarray) -> list[np.ndarray]:
@@ -66,6 +79,7 @@ class PlateAligner:
     work_width: int = 320
     min_iou: float = 0.6
     aspect: tuple[float, float] = (1.0, 7.0)
+    clahe: bool = True
 
     def align(self, img: np.ndarray, box: np.ndarray) -> AlignedPlate:
         """Metoda: quad (kontur z 4 wierzchołkami), rect (obrócony prostokąt) albo box (nie znaleziono)."""
@@ -94,7 +108,7 @@ class PlateAligner:
 
         best, best_iou = None, self.min_iou
         h, w = small.shape[:2]
-        for mask in plate_masks(small):
+        for mask in plate_masks(equalize(small) if self.clahe else small):
             contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             for contour in contours:
                 hull = cv2.convexHull(contour)

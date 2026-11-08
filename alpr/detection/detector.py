@@ -1,7 +1,11 @@
-"""Detektor tablic YOLO (ultralytics importowany leniwie, reszta pakietu działa bez torcha)."""
+"""Detektor tablic YOLO (ultralytics importowany leniwie, reszta pakietu działa bez torcha).
+
+Wagi detekcji dają ramki; wagi YOLO-pose (alpr.detection.pose) dają też 4 narożniki tablicy.
+"""
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 import numpy as np
 
@@ -10,6 +14,11 @@ import numpy as np
 class Detection:
     box: np.ndarray
     conf: float
+    corners: np.ndarray | None = None
+
+
+class Detector(Protocol):
+    def detect(self, img: np.ndarray) -> list[Detection]: ...
 
 
 class PlateDetector:
@@ -21,7 +30,11 @@ class PlateDetector:
         self.imgsz = imgsz
 
     def detect(self, img: np.ndarray) -> list[Detection]:
-        """Ramki x1, y1, x2, y2 na obrazie BGR, malejąco po pewności."""
-        boxes = self.model.predict(img, conf=self.conf, imgsz=self.imgsz, verbose=False)[0].boxes
-        dets = [Detection(b, float(c)) for b, c in zip(boxes.xyxy.cpu().numpy(), boxes.conf.cpu().numpy(), strict=True)]
+        """Ramki x1, y1, x2, y2 na obrazie BGR (z modelem pose także narożniki), malejąco po pewności."""
+        result = self.model.predict(img, conf=self.conf, imgsz=self.imgsz, verbose=False)[0]
+        boxes = result.boxes.xyxy.cpu().numpy()
+        confs = result.boxes.conf.cpu().numpy()
+        keypoints = getattr(result, "keypoints", None)
+        corners = keypoints.xy.cpu().numpy() if keypoints is not None else [None] * len(boxes)
+        dets = [Detection(b, float(c), k) for b, c, k in zip(boxes, confs, corners, strict=True)]
         return sorted(dets, key=lambda d: -d.conf)

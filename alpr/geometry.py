@@ -51,6 +51,19 @@ def box_iou(a: np.ndarray, b: np.ndarray) -> float:
     return inter / union if union > 0 else 0.0
 
 
+def box_iou_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """IoU każdej ramki a (N, 4) z każdą ramką b (M, 4): macierz (N, M), te same działania co box_iou."""
+    a, b = a[:, None, :], b[None, :, :]
+    w = np.minimum(a[..., 2], b[..., 2]) - np.maximum(a[..., 0], b[..., 0])
+    h = np.minimum(a[..., 3], b[..., 3]) - np.maximum(a[..., 1], b[..., 1])
+    inter = np.maximum(0.0, w) * np.maximum(0.0, h)
+    union = (
+        (a[..., 2] - a[..., 0]) * (a[..., 3] - a[..., 1]) + (b[..., 2] - b[..., 0]) * (b[..., 3] - b[..., 1]) - inter
+    )
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(union > 0, inter / union, 0.0)
+
+
 def polygon_iou(a: np.ndarray, b: np.ndarray) -> float:
     a, b = a.astype(np.float32), b.astype(np.float32)
     inter, _ = cv2.intersectConvexConvex(a, b)

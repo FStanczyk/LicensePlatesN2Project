@@ -6,6 +6,7 @@ for det in detector.detect(img):
 """
 
 from alpr.detection.align import AlignedPlate, PlateAligner
+from alpr.detection.classical import ClassicalDetector
 from alpr.detection.detector import Detection, PlateDetector
 
-__all__ = ["AlignedPlate", "Detection", "PlateAligner", "PlateDetector"]
+__all__ = ["AlignedPlate", "ClassicalDetector", "Detection", "PlateAligner", "PlateDetector"]

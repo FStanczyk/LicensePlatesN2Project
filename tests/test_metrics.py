@@ -4,12 +4,16 @@ import pytest
 
 from alpr.detection.metrics import (
     average_precision,
-    best_matching_box,
+    best_conf,
+    best_match,
     boxes_by_image,
     corner_error,
+    desc_order,
     evaluate,
     evaluate_by_group,
+    greedy_match,
     image_groups,
+    image_matches,
     match,
     summarize_alignment,
 )
@@ -111,10 +115,10 @@ def test_corner_error_w_wysokosciach_tablicy():
     assert corner_error(gt + [0, 10], gt) == pytest.approx(0.5)
 
 
-def test_best_matching_box():
+def test_best_match():
     boxes = np.array([[0, 0, 10, 10], [1, 1, 11, 11], [50, 50, 60, 60]], float)
-    np.testing.assert_array_equal(best_matching_box(boxes, np.array([1, 1, 11, 11.0])), boxes[1])
-    assert best_matching_box(boxes, np.array([100, 100, 110, 110.0])) is None
+    assert best_match(boxes, np.array([1, 1, 11, 11.0])) == 1
+    assert best_match(boxes, np.array([100, 100, 110, 110.0])) is None
 
 
 def test_evaluate_by_group():
@@ -281,11 +285,11 @@ def test_corner_error_zdegenerowana_tablica_nie_dzieli_przez_zero():
     assert corner_error(gt + 1, gt) == pytest.approx(np.sqrt(2))
 
 
-def test_best_matching_box_wybiera_najwyzsze_iou_nie_pierwsze():
+def test_best_match_wybiera_najwyzsze_iou_nie_pierwsze():
     target = np.array([0, 0, 10, 10.0])
     boxes = np.array([[2, 0, 12, 10], [0, 0, 10, 10], [1, 0, 11, 10]], float)
-    np.testing.assert_array_equal(best_matching_box(boxes, target), boxes[1])
-    assert best_matching_box(np.zeros((0, 4)), target) is None
+    assert best_match(boxes, target) == 1
+    assert best_match(np.zeros((0, 4)), target) is None
 
 
 def test_summarize_alignment_better_wymaga_poprawy_ponad_0_01():
@@ -308,3 +312,71 @@ def test_summarize_alignment_better_wymaga_poprawy_ponad_0_01():
 def test_boxes_by_image_prog_wlacznie():
     preds = pd.DataFrame([pred("a", 0.25, 0, 0, 1, 1)])
     assert list(boxes_by_image(preds, 0.25)) == ["a"]
+
+
+def test_best_conf_odcina_falszywe_alarmy():
+    gt = make_gt()
+    good = gt[["image", "x1", "y1", "x2", "y2"]].assign(conf=[0.9, 0.8, 0.7])
+    noise = pd.DataFrame([pred("a.jpg", c, 300, 300, 400, 330) for c in (0.5, 0.4, 0.3)])
+    conf, f1 = best_conf(gt, pd.concat([good, noise]))
+    assert (conf, f1) == (0.7, 1.0)
+
+
+def test_best_conf_zgodne_z_evaluate():
+    gt = make_gt()
+    preds = pd.DataFrame(
+        [pred("a.jpg", 0.9, 0, 0, 100, 30), pred("b.jpg", 0.6, 300, 0, 400, 30), pred("b.jpg", 0.5, 50, 50, 150, 80)]
+    )
+    conf, f1 = best_conf(gt, preds)
+    assert f1 == pytest.approx(evaluate(gt, preds, conf)[0]["F1"])
+    assert all(evaluate(gt, preds, c)[0]["F1"] <= f1 + 1e-9 for c in (0.1, 0.55, 0.7, 0.95))
+
+
+def test_best_conf_rowne_pewnosci_liczone_razem():
+    gt = single_gt()
+    preds = pd.DataFrame([pred("a.jpg", 0.5, 0, 0, 100, 30), pred("a.jpg", 0.5, 300, 300, 400, 330)])
+    assert best_conf(gt, preds) == (0.5, pytest.approx(2 / 3))
+
+
+def test_best_conf_bez_predykcji():
+    assert best_conf(make_gt(), pd.DataFrame(columns=["image", "conf", "x1", "y1", "x2", "y2"])) == (0.0, 0.0)
+
+
+def test_desc_order_jak_sort_values_z_remisami_i_nan():
+    rng = np.random.default_rng(0)
+    for n in (0, 1, 5, 17, 200):
+        conf = rng.integers(0, 5, n) / 4
+        conf[rng.random(n) < 0.1] = np.nan
+        expected = pd.Series(conf).sort_values(ascending=False).index.to_numpy()
+        assert np.array_equal(desc_order(conf), expected)
+
+
+def test_greedy_match_zachlanny_i_prog_wlacznie():
+    ious = np.array([[0.6, 0.5], [0.9, 0.5], [0.4, 0.49]])
+    tp, owner = greedy_match(ious, 0.5)
+    assert tp.tolist() == [True, True, False]
+    assert owner.tolist() == [0, 1]
+    tp, owner = greedy_match(np.zeros((3, 0)), 0.5)
+    assert tp.tolist() == [False] * 3 and owner.tolist() == []
+
+
+def test_image_matches_kolejnosc_i_pozycje_tablic():
+    gt = pd.DataFrame(
+        {"image": ["b", "a", "b"], "x1": [0, 0, 50], "y1": [0, 0, 0], "x2": [10, 10, 60], "y2": [10, 10, 10]}
+    )
+    preds = pd.DataFrame(
+        {
+            "image": ["b", "b", "c"],
+            "conf": [0.3, 0.8, 0.9],
+            "x1": [50, 0, 0],
+            "y1": [0] * 3,
+            "x2": [60, 10, 10],
+            "y2": [10] * 3,
+        }
+    )
+    a, b = image_matches(gt, preds, [0.5, 0.95])
+    assert (a.image, b.image) == ("a", "b")
+    assert a.plates.tolist() == [1] and len(a.conf) == 0 and a.ious.shape == (0, 1)
+    assert b.plates.tolist() == [0, 2] and b.conf.tolist() == [0.8, 0.3]
+    assert b.ious.tolist() == [[1.0, 0.0], [0.0, 1.0]]
+    assert [t.tolist() for t in b.tp] == [[True, True], [True, True]]
