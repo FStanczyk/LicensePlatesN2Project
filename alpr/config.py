@@ -7,6 +7,7 @@ DATA_DIR = ROOT / "data"
 COMBINED = DATA_DIR / "combined"
 DOWNLOADS = DATA_DIR / "_downloads"
 EXPERIMENT = DATA_DIR / "experiment"
+POSE = DATA_DIR / "pose"
 RESULTS = ROOT / "results"
 RUNS = ROOT / "runs"
 

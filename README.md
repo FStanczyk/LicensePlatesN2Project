@@ -242,16 +242,18 @@ Szczegóły decyzji: `process_documentation/hubert.md`.
 
 ```bash
 python3 scripts/train_yolo.py                                   # trening YOLO (GPU: Kaggle/Colab)
+python3 scripts/train_yolo.py --pose --imgsz 960                # YOLO-pose: ramka + 4 narożniki tablicy
 python3 scripts/eval_detection.py --weights runs/detect/plates/weights/best.pt
+python3 scripts/eval_detection.py --classical --name classical  # klasyczny detektor (punkt odniesienia)
 python3 scripts/eval_alignment.py                               # jakość wyrównania perspektywy
 python3 scripts/detect_plates.py --weights best.pt --images zdjecia/   # wycinki dla OCR
 ```
 
 | Skrypt | Co robi | Wynik |
 |---|---|---|
-| `train_yolo.py` | fine-tuning YOLO (domyślnie `yolo11n.pt`, 640 px) na `detection/data.yaml`, stałe ziarno | `runs/detect/<name>/weights/best.pt` |
-| `eval_detection.py` | P, R, F1, AP50, AP50-95 dla całego podziału i w grupach: źródło, `lighting`, `exposure`, `artificial_corruption`, siła, oryginał / kopia; `--images-root` testuje zdjęcia po filtrze | `results/detection_eval/<name>/metrics.csv` |
-| `eval_alignment.py` | porównuje wycinek ramki z `PlateAligner` względem prawdziwych 4 narożników (IoU, błąd narożnika) | `results/alignment_eval/<name>/summary.csv` |
+| `train_yolo.py` | fine-tuning YOLO (domyślnie `yolo11n.pt`, 640 px) na `detection/data.yaml`, stałe ziarno; `--pose`: `yolo11n-pose.pt` na zbiorze z narożnikami (eksport do `data/pose/`) | `runs/detect/<name>/weights/best.pt` |
+| `eval_detection.py` | P, R, F1, AP50, AP50-95 dla całego podziału i w grupach: źródło, `lighting`, `exposure`, `artificial_corruption`, siła, oryginał / kopia; czas na zdjęcie i próg `conf` maksymalizujący F1 (dobierz na `val`, podaj jako `--conf` na `test`); `--classical` zamiast wag, `--images-root` testuje zdjęcia po filtrze | `results/detection_eval/<name>/metrics.csv`, `predictions.csv` (`image, conf, x1-y2, polygon`; `polygon` tylko z YOLO-pose) |
+| `eval_alignment.py` | porównuje wycinek ramki z `PlateAligner` (albo z narożnikami YOLO-pose z `--preds`) względem prawdziwych 4 narożników (IoU, błąd narożnika) | `results/alignment_eval/<name>/summary.csv` |
 | `detect_plates.py` | folder zdjęć albo podział z `plates.csv` -> wyprostowane wycinki + CSV detekcji | `results/detections/<name>/detections.csv`, `crops/` |
 
 Wszystkie skrypty przyjmują `--dataset`. Domyślnie to `data/combined`, a w notebooku Kaggle
@@ -283,6 +285,32 @@ z niebieskim paskiem UE), przybliżamy go 4 narożnikami, doprecyzowujemy je dop
 do boków i prostujemy wycinek tą samą metodą co `build_dataset.py`. Gdy kontur nie pasuje do ramki
 (IoU < 0.6), ma nietypowe proporcje albo sięga obu przeciwległych brzegów okna (to tło, nie tablica),
 zostaje zwykły wycinek ramki (`align = box`). `eval_alignment.py` pomija data1, bo jej narożniki to prostokąty ramek.
+Przed szukaniem konturu wycinek przechodzi przez CLAHE na kanale L (`PlateAligner(clahe=True)`, domyślnie).
+Na data2 (2004 tablice, ramki z etykiet) CLAHE podnosi IoU z 0.814 do 0.820, a przy niedoświetleniu z 0.810 do 0.828
+(sama ramka 0.817); w nocy aligner nadal ma większy błąd narożnika niż ramka (0.179 wobec 0.148).
+
+YOLO-pose (`--pose`): ten sam detektor uczy się też 4 narożników tablicy (punkty kluczowe TL, TR, BR, BL, odbicie
+poziome zamienia lewe z prawymi). Narożniki są tylko w data2; tablice z data1 mają widoczność 0, więc uczą tylko ramki.
+`PlateDetector` z takimi wagami zwraca narożniki, a `detect_plates.py` i `run_experiment.py` prostują nimi wycinki
+(`align = pose`) zamiast `PlateAligner`. Wymaga treningu na GPU (Kaggle/Colab). Cała ścieżka (eksport, trening,
+`eval_detection.py` z kolumną `polygon`, `eval_alignment.py --preds` z `method = pose`) sprawdzona na CPU
+(2 epoki, 30% danych, 320 px); narożniki uczą się wolniej niż ramki, więc miarodajny wynik da dopiero pełny trening.
+Na CPU `--workers 4 --cache ram` skraca trening kilkukrotnie (2 epoki w ok. 1 min zamiast kilku).
+
+Klasyczny detektor (`alpr.detection.ClassicalDetector`, bez uczenia): black-hat i pionowe krawędzie Sobela,
+domknięcie morfologiczne w 3 skalach, filtr proporcji i weryfikacja znaków (plamy po Otsu w jednym rzędzie).
+Parametry dobrane na `val`. Wynik na `test` (próg 0.49 dobrany na `val`, CPU, ok. 40 ms na zdjęcie):
+
+| Grupa | P | R | F1 | AP50 | AP50-95 |
+|---|---|---|---|---|---|
+| wszystkie | 0.706 | 0.340 | 0.459 | 0.344 | 0.171 |
+| data1 (dzień, PL) | 0.824 | 0.718 | 0.767 | 0.691 | 0.386 |
+| data2, dzień | 0.693 | 0.307 | 0.426 | 0.301 | 0.138 |
+| data2, noc | 0.514 | 0.153 | 0.235 | 0.166 | 0.067 |
+| oryginały / kopie zniekształcone (AP50) | | | | 0.436 / 0.266 | |
+
+Dla porównania YOLO `yolo11n` na `val`: P 0.969, R 0.943, mAP50 0.969. Klasyczna metoda działa tylko na prostych
+zdjęciach z bliska (data1) i traci najwięcej w nocy i przy rozmyciu.
 
 Format `detections.csv` (wejście dla OCR): `image, det_id, conf, x1, y1, x2, y2, polygon, align, crop`;
 zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.

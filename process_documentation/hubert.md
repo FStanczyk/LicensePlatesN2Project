@@ -347,3 +347,37 @@ Poprawki: `four_corners` porządkuje narożniki (kierunek z pola, górny bok z d
 * uzgodnić ze Stańczykiem nową wersję zbioru (`build_dataset.py`, `kaggle datasets version`) (blok 6),
 * przetrenować YOLO na nowym zbiorze i policzyć ponownie `eval_detection.py`, `eval_alignment.py` (blok 6),
 * z Golbą: ponowny `build_experiment.py --force` i `run_experiment.py --force`, sprawdzić wpływ filtra OCR (blok 6).
+
+## 08.11.2026: klasyczny detektor, próg F1, CLAHE w alignerze, YOLO-pose
+
+### Punkt wyjścia
+Pytanie zespołu: czy prosty algorytm bez uczenia może zastąpić YOLO. Do tego słabości mojej części z przeglądu:
+stały próg `conf` 0.25, aligner gorszy od ramki przy niedoświetleniu i w nocy, brak pomiaru czasu.
+
+### Decyzje
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Klasyczny detektor (`alpr/detection/classical.py`) | black-hat + Sobel, domknięcie w 3 skalach, filtr proporcji, weryfikacja znaków (plamy po Otsu w rzędzie) | sama morfologia: AP50 0.06 na `val` (za dużo fałszywych kandydatów); weryfikacja znaków: 0.256 |
+| Strojenie | tylko na `val`, wynik na `test` | bez dopasowania do testu |
+| Powiększanie ramki klasycznej | nie | na `val` każde powiększenie obniża AP50 (do 0.066) |
+| Próg pewności | `best_conf` (maksimum F1), drukowany przez `eval_detection.py` | dobierany na `val`, podawany jako `--conf` na `test` |
+| CLAHE w alignerze | `PlateAligner(clahe=True)` domyślnie | niedoświetlenie: IoU 0.810 -> 0.828 (ramka 0.817), mniej `box` (703 -> 550) |
+| YOLO-pose | `train_yolo.py --pose`: eksport `alpr.detection.pose` (narożniki data2, data1 z widocznością 0), `PlateDetector` zwraca narożniki, `crop_plates` i `evaluate_alignment` ich używają | aligner konturowy w nocy nadal gorszy od ramki (błąd narożnika 0.179 wobec 0.148); model uczony nie zależy od progów jasności |
+
+### Wynik
+Klasyczny detektor na `test` (próg 0.49 z `val`, CPU, ok. 40 ms/zdjęcie, `results/detection_eval/classical/`):
+
+| Grupa | P | R | F1 | AP50 |
+|---|---|---|---|---|
+| wszystkie | 0.706 | 0.340 | 0.459 | 0.344 |
+| data1 | 0.824 | 0.718 | 0.767 | 0.691 |
+| data2 dzień | 0.693 | 0.307 | 0.426 | 0.301 |
+| data2 noc | 0.514 | 0.153 | 0.235 | 0.166 |
+
+Wniosek: klasyka nie zastąpi YOLO (na `val` YOLO: P 0.969, R 0.943), działa tylko na prostych zdjęciach z bliska.
+Jest punktem odniesienia do raportu: pokazuje, jak bardzo oświetlenie szkodzi metodom bez uczenia.
+Testy: 378 przechodzi (nowe `test_classical.py`, `test_pose.py`, `best_conf` w `test_metrics.py`), pokrycie 99%.
+YOLO-pose sprawdzony na CPU (`yolo11n-pose.pt`, 2 epoki, 30% danych, 320 px, `--workers 4 --cache ram`, ok. 1 min):
+predykcje z narożnikami, `eval_alignment.py --preds` dopasowuje 91 tablic z `method = pose`; narożniki po 2 epokach
+jeszcze bezużyteczne (IoU 0.18), pełny trening na GPU (blok 6). Nowa flaga `train_yolo.py --cache`.
+

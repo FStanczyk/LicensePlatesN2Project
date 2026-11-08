@@ -29,5 +29,6 @@ results/**/predictions.csv
 
 # Eksperyment (Golba): zdjęcia z build_experiment.py i wycinki z run_experiment.py
 data/experiment/
+data/pose/
 results/experiment/*/crops/
 .coverage

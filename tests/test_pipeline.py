@@ -73,7 +73,8 @@ def test_detect_malejaco_po_pewnosci(detector):
 def test_predict_boxes(detector, images):
     base, names = images
     preds = predict_boxes(detector, names, base)
-    assert list(preds.columns) == ["image", "conf", "x1", "y1", "x2", "y2"]
+    assert list(preds.columns) == ["image", "conf", "x1", "y1", "x2", "y2", "polygon"]
+    assert preds.polygon.isna().all()
     assert preds.image.tolist() == ["a/jasne.png", "a/jasne.png"]
 
 
@@ -130,7 +131,7 @@ def test_read_images_pomija_niewczytywalne(images, capsys):
 
 def test_predict_boxes_puste_ma_kolumny(detector, tmp_path):
     preds = predict_boxes(detector, ["brak.png"], tmp_path)
-    assert preds.empty and list(preds.columns) == ["image", "conf", "x1", "y1", "x2", "y2"]
+    assert preds.empty and list(preds.columns) == ["image", "conf", "x1", "y1", "x2", "y2", "polygon"]
 
 
 @pytest.mark.parametrize(

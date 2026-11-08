@@ -4,7 +4,8 @@ import pytest
 
 from alpr.detection.metrics import (
     average_precision,
-    best_matching_box,
+    best_conf,
+    best_match,
     boxes_by_image,
     corner_error,
     evaluate,
@@ -111,10 +112,10 @@ def test_corner_error_w_wysokosciach_tablicy():
     assert corner_error(gt + [0, 10], gt) == pytest.approx(0.5)
 
 
-def test_best_matching_box():
+def test_best_match():
     boxes = np.array([[0, 0, 10, 10], [1, 1, 11, 11], [50, 50, 60, 60]], float)
-    np.testing.assert_array_equal(best_matching_box(boxes, np.array([1, 1, 11, 11.0])), boxes[1])
-    assert best_matching_box(boxes, np.array([100, 100, 110, 110.0])) is None
+    assert best_match(boxes, np.array([1, 1, 11, 11.0])) == 1
+    assert best_match(boxes, np.array([100, 100, 110, 110.0])) is None
 
 
 def test_evaluate_by_group():
@@ -281,11 +282,11 @@ def test_corner_error_zdegenerowana_tablica_nie_dzieli_przez_zero():
     assert corner_error(gt + 1, gt) == pytest.approx(np.sqrt(2))
 
 
-def test_best_matching_box_wybiera_najwyzsze_iou_nie_pierwsze():
+def test_best_match_wybiera_najwyzsze_iou_nie_pierwsze():
     target = np.array([0, 0, 10, 10.0])
     boxes = np.array([[2, 0, 12, 10], [0, 0, 10, 10], [1, 0, 11, 10]], float)
-    np.testing.assert_array_equal(best_matching_box(boxes, target), boxes[1])
-    assert best_matching_box(np.zeros((0, 4)), target) is None
+    assert best_match(boxes, target) == 1
+    assert best_match(np.zeros((0, 4)), target) is None
 
 
 def test_summarize_alignment_better_wymaga_poprawy_ponad_0_01():
@@ -308,3 +309,31 @@ def test_summarize_alignment_better_wymaga_poprawy_ponad_0_01():
 def test_boxes_by_image_prog_wlacznie():
     preds = pd.DataFrame([pred("a", 0.25, 0, 0, 1, 1)])
     assert list(boxes_by_image(preds, 0.25)) == ["a"]
+
+
+def test_best_conf_odcina_falszywe_alarmy():
+    gt = make_gt()
+    good = gt[["image", "x1", "y1", "x2", "y2"]].assign(conf=[0.9, 0.8, 0.7])
+    noise = pd.DataFrame([pred("a.jpg", c, 300, 300, 400, 330) for c in (0.5, 0.4, 0.3)])
+    conf, f1 = best_conf(gt, pd.concat([good, noise]))
+    assert (conf, f1) == (0.7, 1.0)
+
+
+def test_best_conf_zgodne_z_evaluate():
+    gt = make_gt()
+    preds = pd.DataFrame(
+        [pred("a.jpg", 0.9, 0, 0, 100, 30), pred("b.jpg", 0.6, 300, 0, 400, 30), pred("b.jpg", 0.5, 50, 50, 150, 80)]
+    )
+    conf, f1 = best_conf(gt, preds)
+    assert f1 == pytest.approx(evaluate(gt, preds, conf)[0]["F1"])
+    assert all(evaluate(gt, preds, c)[0]["F1"] <= f1 + 1e-9 for c in (0.1, 0.55, 0.7, 0.95))
+
+
+def test_best_conf_rowne_pewnosci_liczone_razem():
+    gt = single_gt()
+    preds = pd.DataFrame([pred("a.jpg", 0.5, 0, 0, 100, 30), pred("a.jpg", 0.5, 300, 300, 400, 330)])
+    assert best_conf(gt, preds) == (0.5, pytest.approx(2 / 3))
+
+
+def test_best_conf_bez_predykcji():
+    assert best_conf(make_gt(), pd.DataFrame(columns=["image", "conf", "x1", "y1", "x2", "y2"])) == (0.0, 0.0)

@@ -4,7 +4,8 @@ from pathlib import Path
 
 import yaml
 
-from alpr.config import SEED
+from alpr.config import POSE, SEED
+from alpr.detection.pose import export_pose_dataset
 
 
 def resolved_yaml(data: Path, out_dir: Path) -> Path:
@@ -32,3 +33,8 @@ def train_detector(data: Path, model: str, project: Path, name: str, **params) -
         **params,
     )
     return project / name / "weights" / "best.pt"
+
+
+def train_pose_detector(dataset: Path, model: str, project: Path, name: str, pose_dir: Path = POSE, **params) -> Path:
+    """Eksport zbioru YOLO-pose (alpr.detection.pose) do pose_dir i trening; zwraca ścieżkę best.pt."""
+    return train_detector(export_pose_dataset(dataset, pose_dir), model, project, name, **params)

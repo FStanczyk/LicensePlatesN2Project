@@ -86,6 +86,26 @@ def evaluate(gt: pd.DataFrame, preds: pd.DataFrame, conf: float) -> tuple[dict, 
     return metrics, pd.DataFrame(plates)
 
 
+def best_conf(gt: pd.DataFrame, preds: pd.DataFrame, iou: float = 0.5) -> tuple[float, float]:
+    """(próg pewności, F1) maksymalizujący F1 przy IoU >= iou; dobierać na val, stosować na test."""
+    pred_groups = dict(tuple(preds.groupby("image")))
+    tps, confs = [], []
+    for image, g in gt.groupby("image"):
+        p = pred_groups.get(image)
+        if p is not None:
+            p = p.sort_values("conf", ascending=False)
+            tps.append(match(p[BOX].to_numpy(float), g[BOX].to_numpy(float), iou)[0])
+            confs.append(p.conf.to_numpy(float))
+    if not tps:
+        return 0.0, 0.0
+    order = np.argsort(-np.concatenate(confs), kind="stable")
+    tp, conf = np.concatenate(tps)[order], np.concatenate(confs)[order]
+    f1 = 2 * np.cumsum(tp) / (np.arange(1, len(tp) + 1) + len(gt))
+    f1[np.r_[conf[1:] == conf[:-1], False]] = -1
+    i = int(np.argmax(f1))
+    return float(conf[i]), float(f1[i])
+
+
 def image_groups(gt: pd.DataFrame) -> pd.DataFrame:
     """Wartość każdej grupy z GROUPS dla zdjęcia; różne wartości tablic na zdjęciu dają "mixed"."""
     if "source" not in gt or "corrupted" not in gt:
@@ -110,12 +130,13 @@ def corner_error(est: np.ndarray, gt: np.ndarray) -> float:
     return float(np.linalg.norm(est - gt, axis=1).mean() / max(height, 1.0))
 
 
-def best_matching_box(boxes: np.ndarray, gt_box: np.ndarray, min_iou: float = 0.5) -> np.ndarray | None:
+def best_match(boxes: np.ndarray, gt_box: np.ndarray, min_iou: float = 0.5) -> int | None:
+    """Indeks ramki o największym IoU z gt_box (co najmniej min_iou) albo None."""
     best, best_iou = None, min_iou
-    for box in boxes:
+    for i, box in enumerate(boxes):
         iou = box_iou(box, gt_box)
         if iou >= best_iou:
-            best, best_iou = box, iou
+            best, best_iou = i, iou
     return best
 
 
