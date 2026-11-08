@@ -1,7 +1,9 @@
 """Przebiegi po zdjęciach: predykcje, wycinki dla OCR, ocena wyrównania."""
 
 import os
+from collections import deque
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path, PurePosixPath
 
 import cv2
@@ -14,18 +16,25 @@ from alpr.detection.detector import Detector
 from alpr.detection.metrics import BOX, best_match, corner_error
 from alpr.geometry import box_corners, polygon_iou, warp
 
+READ_WORKERS = 8
 DETECTION_FIELDS = ["image", "det_id", "conf", "x1", "y1", "x2", "y2", "polygon", "align", "crop"]
 
 
 def read_images(images: list[str], base: Path) -> Iterator[tuple[str, np.ndarray]]:
-    for i, rel in enumerate(images, 1):
-        img = cv2.imread(str(base / rel))
-        if img is None:
-            print(f"  pominięto (nie da się wczytać): {rel}")
-        else:
-            yield rel, img
-        if i % 100 == 0:
-            print(f"  {i}/{len(images)}")
+    """Zdjęcia w kolejności images; wczytywane w tle (cv2 zwalnia GIL), najwyżej 2 * READ_WORKERS naraz w pamięci."""
+    with ThreadPoolExecutor(READ_WORKERS) as pool:
+        pending = deque()
+        for i, rel in enumerate(images, 1):
+            pending.append((i, rel, pool.submit(cv2.imread, str(base / rel))))
+            while pending and (len(pending) > 2 * READ_WORKERS or i == len(images)):
+                k, name, future = pending.popleft()
+                img = future.result()
+                if img is None:
+                    print(f"  pominięto (nie da się wczytać): {name}")
+                else:
+                    yield name, img
+                if k % 100 == 0:
+                    print(f"  {k}/{len(images)}")
 
 
 def predict_boxes(detector: Detector, images: list[str], base: Path) -> pd.DataFrame:

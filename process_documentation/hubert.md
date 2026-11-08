@@ -381,3 +381,52 @@ YOLO-pose sprawdzony na CPU (`yolo11n-pose.pt`, 2 epoki, 30% danych, 320 px, `--
 predykcje z narożnikami, `eval_alignment.py --preds` dopasowuje 91 tablic z `method = pose`; narożniki po 2 epokach
 jeszcze bezużyteczne (IoU 0.18), pełny trening na GPU (blok 6). Nowa flaga `train_yolo.py --cache`.
 
+## 08.11.2026: optymalizacja obliczeń detekcji i wyrównania
+
+### Punkt wyjścia
+Cel: przyspieszyć moją część (metryki, wyrównanie, przebiegi po zdjęciach) bez zmiany architektury, interfejsów
+i wyników. Najpierw profil (cProfile, mediana z kilku powtórzeń, `data/combined`, CPU 8 rdzeni):
+
+| Przebieg | Czas | Główny koszt |
+|---|---|---|
+| `evaluate_alignment`, 2004 tablice | 28.3 s | `imread` 59%, `find_corners` 26% |
+| `crop_plates` na `test` (bez modelu) | 7.2 s | `imread` 55%, wyrównanie 37% |
+| `evaluate_by_group` na `test` | 3.4 s | `match` i `box_iou` parami, 28 wywołań `evaluate` z sortowaniem w pandas |
+| `match_results` (1701 tablic) | 2.5 s | `iterrows` i indeksowanie wierszy |
+
+### Decyzje
+| Zmiana | Decyzja | Powód |
+|---|---|---|
+| `geometry.box_iou_matrix` i metryki na macierzy IoU (`image_matches`, `greedy_match`, `desc_order`) | wdrożone | dopasowania raz na zdjęcie dla 10 progów i wszystkich grup; kolejność jak `sort_values` (remisy bez zmian) |
+| `read_images`: wczytywanie w tle (8 wątków, najwyżej 16 zdjęć w pamięci) | wdrożone | cv2 zwalnia GIL; kolejność wierszy bez zmian |
+| `experiment.match_results`: macierz IoU i `to_dict` zamiast `iterrows` | wdrożone | ta sama pętla, wynik co do bitu |
+| wczesne odrzucanie konturów w `find_corners` | odrzucone | tylko 5% |
+| procesy w `evaluate_alignment` | odrzucone | 11.3 -> 7.8 s kosztem złożoności (przykłady osobno, `forkserver`) |
+| wsadowe `predict` YOLO | odrzucone | zmienia wyniki: dopełnienie do kwadratu przy różnych kształtach, różnice do 0.0066 przy tych samych |
+| klasyczny detektor (pamięć `char_score`, NMS wsadowy, numpy w `char_score`) | odrzucone | każda zmiana poniżej 4%; tylko 3.3% kandydatów powtarza się między skalami |
+| `refine_quad` bez pętli, wsadowe `best_match` | odrzucone | inna kolejność sumowania float32 i mieszane float32/float64 mogłyby zmienić wynik przy znikomym zysku |
+
+### Wynik
+Wyniki identyczne co do bitu ze starą wersją (`assert_frame_equal`, `check_exact`) na prawdziwym zbiorze:
+metryki (test, val, także syntetyczne predykcje z remisami), `plates.csv`, `best_conf`, `evaluate_alignment`
+(IoU wyrównania 0.820, jak wcześniej), `crop_plates` (753 wycinki PNG bajt w bajt), `match_results`.
+
+| Przebieg | Przed | Po |
+|---|---|---|
+| `evaluate_by_group` (test) | 3.17 s | 0.08 s |
+| `evaluate_by_group` (100 ramek na zdjęcie, z remisami) | 7.64 s | 0.29 s |
+| `match_results` | 2.27 s | 0.11 s |
+| `evaluate_alignment` (2004 tablice) | 26.9 s | 11.0 s |
+| `crop_plates` (test, bez modelu) | 7.2 s | 3.5 s |
+
+Testy: nowy `tests/test_rownowaznosc.py` (stare implementacje jako wzorzec na losowych danych z remisami i NaN),
+testy `box_iou_matrix`, `desc_order`, `greedy_match`, `image_matches`, `read_images` (kolejność, limit pamięci).
+`pytest`: 435 przechodzi, 35 pominiętych, 5 xfail; `ruff` przechodzi. Trening YOLO bez zmian (to pętla ultralytics).
+
+### Stan na koniec dnia
+* [x] profil, raport, wdrożenie punktów 1-3, testy, README
+* [ ] commit i wypchnięcie
+
+### Do zrobienia (moja część)
+* `eval_detection.py` na nowych wagach: czas na zdjęcie liczy teraz wczytywanie w tle, porównywać tylko z nowymi pomiarami (blok 6),
+* uprzedzić Golbę o zmianie `match_results` w `alpr/experiment.py` (blok 6).

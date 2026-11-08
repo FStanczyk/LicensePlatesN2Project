@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from alpr.geometry import box_corners, box_iou, four_corners, order_corners, polygon_iou, warp
+from alpr.geometry import box_corners, box_iou, box_iou_matrix, four_corners, order_corners, polygon_iou, warp
 
 QUAD = np.array([[10, 20], [150, 30], [140, 90], [15, 80]], dtype=np.float32)
 
@@ -153,3 +153,18 @@ def test_warp_kolejnosc_naroznikow_ma_znaczenie():
     assert warp(img, poly)[:, 0].mean() == 255
     mirrored = poly[[1, 0, 3, 2]]
     assert warp(img, mirrored)[:, 0].mean() == 0
+
+
+@pytest.mark.parametrize("dtype", [np.float64, np.float32])
+def test_box_iou_matrix_identyczne_z_box_iou(dtype):
+    a, b = random_boxes(30, 1).astype(dtype), random_boxes(20, 2).astype(dtype)
+    b[:5] = a[:5]
+    b[5] = [3, 3, 3, 9]
+    matrix = box_iou_matrix(a, b)
+    assert matrix.shape == (30, 20) and matrix.dtype == dtype
+    assert all(matrix[i, j] == box_iou(a[i], b[j]) for i in range(30) for j in range(20))
+
+
+def test_box_iou_matrix_puste():
+    assert box_iou_matrix(np.zeros((0, 4)), random_boxes(3)).shape == (0, 3)
+    assert box_iou_matrix(random_boxes(2), np.zeros((0, 4))).shape == (2, 0)

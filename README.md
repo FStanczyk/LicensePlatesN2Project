@@ -259,6 +259,12 @@ python3 scripts/detect_plates.py --weights best.pt --images zdjecia/   # wycinki
 Wszystkie skrypty przyjmują `--dataset`. Domyślnie to `data/combined`, a w notebooku Kaggle
 z podpiętym datasetem `/kaggle/input/eu-license-plates-alpr`.
 
+Wydajność (od 08.11.2026, wyniki bez zmian, sprawdzone na prawdziwym zbiorze i w `tests/test_rownowaznosc.py`):
+zdjęcia są wczytywane w tle w 8 wątkach (`read_images`), a metryki liczą macierz IoU i dopasowania raz na zdjęcie
+dla wszystkich progów i grup. Na CPU: `evaluate_by_group` 3.4 s -> 0.08 s, `evaluate_alignment` (2004 tablice)
+27 s -> 11 s, `crop_plates` bez modelu 7.2 s -> 3.5 s. Czas na zdjęcie z `eval_detection.py` obejmuje teraz
+wczytywanie w tle, więc jest niższy niż w pomiarach sprzed tej zmiany (np. klasyczny detektor ok. 40 ms).
+
 **Trening na GPU: `notebooks/detekcja.ipynb`.** Na Kaggle: nowy notebook, File -> Import Notebook,
 Accelerator GPU, Internet włączony, Add Input `filipstanczyk/eu-license-plates-alpr`, Run All.
 W Colab: Runtime GPU i token Kaggle w Secrets (`KAGGLE_USERNAME`, `KAGGLE_KEY`), zbiór pobiera się do `data/combined/`.
@@ -401,7 +407,7 @@ Skrypty wymagają zainstalowanego pakietu (`pip install -e .`). Najczęściej u�
 |---|---|---|
 | `alpr/config.py` | ścieżki, `SEED`, nazwa zbioru Kaggle, `default_dataset()` | wszyscy |
 | `alpr/dataset.py` | `load_plates`, `crop_path`, `normalize_text`, `exposure`, format `polygon`, `write_csv` | wszyscy |
-| `alpr/geometry.py` | narożniki, `warp` (prostowanie), IoU ramek i wielokątów | wszyscy |
+| `alpr/geometry.py` | narożniki, `warp` (prostowanie), IoU ramek (też macierzowo: `box_iou_matrix`) i wielokątów | wszyscy |
 | `alpr/download.py` | pobieranie HTTP z wznawianiem, zdalne archiwa zip, zbiór z Kaggle, sumy kontrolne | wszyscy |
 | `alpr/build/` | `sources.py` (klasa na każde źródło: pobieranie, wybór podzbioru, składanie), `writer.py` (`CombinedWriter`), `corruptions.py` | Stańczyk |
 | `alpr/preprocessing.py` | `enhance(img, method)`: szkielet, metody do uzupełnienia | Stańczyk |

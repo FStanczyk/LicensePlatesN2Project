@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 
 from alpr.dataset import load_plates
-from alpr.detection.metrics import BOX, match
-from alpr.geometry import box_iou
+from alpr.detection.metrics import BOX, desc_order, greedy_match
+from alpr.geometry import box_iou_matrix
 
 SPLITS = ("test",)
 CORRUPTIONS = ("brightness", "darken", "motion_blur", "defocus_blur")
@@ -99,28 +99,32 @@ def build_experiment(
 
 def match_results(gt: pd.DataFrame, ocr: pd.DataFrame) -> pd.DataFrame:
     """Tablica z ground truth obok dopasowanej detekcji (IoU >= 0.5, jak w metrykach detekcji) i jej odczytu."""
-    dets = dict(tuple(ocr[ocr.det_id.notna()].groupby("image")))
+    dets = ocr[ocr.det_id.notna()]
+    by_image = dets.groupby("image").indices
+    det_box, det_conf, det_rows = dets[BOX].to_numpy(float), dets.conf.to_numpy(float), dets.to_dict("records")
+    gt_box, gt_rows = gt[BOX].to_numpy(float), gt.to_dict("records")
     rows = []
-    for image, g in gt.groupby("image", sort=False):
-        d = dets.get(image, ocr.iloc[:0]).sort_values("conf", ascending=False)
-        boxes, pred = g[BOX].to_numpy(float), d[BOX].to_numpy(float)
-        _, owner = match(pred, boxes, 0.5)
-        for (_, plate), o, box in zip(g.iterrows(), owner, boxes, strict=True):
-            det = d.iloc[o] if o >= 0 else None
+    for image, plates in gt.groupby("image", sort=False).indices.items():
+        d = by_image.get(image, np.zeros(0, dtype=int))
+        d = d[desc_order(det_conf[d])]
+        ious = box_iou_matrix(det_box[d], gt_box[plates])
+        _, owner = greedy_match(ious, 0.5)
+        best = ious.max(axis=0) if len(d) else np.zeros(len(plates))
+        for g, o, iou in zip(plates, owner, best, strict=True):
+            plate, det = gt_rows[g], det_rows[d[o]] if o >= 0 else None
             text_pred = det["text"] if det is not None and isinstance(det["text"], str) else ""
             rows.append(
                 {
-                    **plate[["variant", "artificial_corruption", "artificial_severity", "image", "plate_id"]],
-                    **plate[["split", "exposure"]],
-                    "text_true": plate.text,
+                    **{c: plate[c] for c in [*RESULT_FIELDS[:5], "split", "exposure"]},
+                    "text_true": plate["text"],
                     "detected": int(o >= 0),
-                    "iou": round(max((box_iou(p, box) for p in pred), default=0.0), 3),
+                    "iou": round(iou, 3),
                     "det_conf": det["conf"] if det is not None else np.nan,
                     "align": det["align"] if det is not None else "",
                     "crop": det["crop"] if det is not None else "",
                     "text_pred": text_pred,
                     "conf_ocr": det["conf_ocr"] if det is not None else np.nan,
-                    "text_ok": int(text_pred == plate.text),
+                    "text_ok": int(text_pred == plate["text"]),
                 }
             )
     return pd.DataFrame(rows, columns=RESULT_FIELDS)

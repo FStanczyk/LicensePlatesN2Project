@@ -235,3 +235,28 @@ def test_evaluate_alignment_pomija_prostokaty_z_data1(tmp_path):
     plates = alignment_dataset(tmp_path)
     plates = add_derived(plates.assign(plate_id="data1_s_0"))
     assert evaluate_alignment(plates, tmp_path, PlateAligner()).empty
+
+
+def test_read_images_w_tle_zachowuje_kolejnosc_i_pamiec(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr("alpr.detection.pipeline.READ_WORKERS", 2)
+    names = [f"{i:03d}.png" for i in range(250)]
+    for i, name in enumerate(names):
+        if i != 7:
+            cv2.imwrite(str(tmp_path / name), np.full((4, 4, 3), i % 256, np.uint8))
+    calls = []
+    imread = cv2.imread
+    monkeypatch.setattr(cv2, "imread", lambda path: calls.append(path) or imread(path))
+    reader = read_images(names, tmp_path)
+    first = next(reader)
+    assert first[0] == "000.png"
+    assert len(calls) <= 2 * 2 + 1
+    got = [first, *reader]
+    assert [rel for rel, _ in got] == [n for i, n in enumerate(names) if i != 7]
+    assert all(img[0, 0, 0] == int(rel[:3]) % 256 for rel, img in got)
+    out = capsys.readouterr().out
+    assert "pominięto (nie da się wczytać): 007.png" in out
+    assert "  100/250" in out and "  200/250" in out
+
+
+def test_read_images_puste():
+    assert list(read_images([], ".")) == []

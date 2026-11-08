@@ -8,9 +8,12 @@ from alpr.detection.metrics import (
     best_match,
     boxes_by_image,
     corner_error,
+    desc_order,
     evaluate,
     evaluate_by_group,
+    greedy_match,
     image_groups,
+    image_matches,
     match,
     summarize_alignment,
 )
@@ -337,3 +340,43 @@ def test_best_conf_rowne_pewnosci_liczone_razem():
 
 def test_best_conf_bez_predykcji():
     assert best_conf(make_gt(), pd.DataFrame(columns=["image", "conf", "x1", "y1", "x2", "y2"])) == (0.0, 0.0)
+
+
+def test_desc_order_jak_sort_values_z_remisami_i_nan():
+    rng = np.random.default_rng(0)
+    for n in (0, 1, 5, 17, 200):
+        conf = rng.integers(0, 5, n) / 4
+        conf[rng.random(n) < 0.1] = np.nan
+        expected = pd.Series(conf).sort_values(ascending=False).index.to_numpy()
+        assert np.array_equal(desc_order(conf), expected)
+
+
+def test_greedy_match_zachlanny_i_prog_wlacznie():
+    ious = np.array([[0.6, 0.5], [0.9, 0.5], [0.4, 0.49]])
+    tp, owner = greedy_match(ious, 0.5)
+    assert tp.tolist() == [True, True, False]
+    assert owner.tolist() == [0, 1]
+    tp, owner = greedy_match(np.zeros((3, 0)), 0.5)
+    assert tp.tolist() == [False] * 3 and owner.tolist() == []
+
+
+def test_image_matches_kolejnosc_i_pozycje_tablic():
+    gt = pd.DataFrame(
+        {"image": ["b", "a", "b"], "x1": [0, 0, 50], "y1": [0, 0, 0], "x2": [10, 10, 60], "y2": [10, 10, 10]}
+    )
+    preds = pd.DataFrame(
+        {
+            "image": ["b", "b", "c"],
+            "conf": [0.3, 0.8, 0.9],
+            "x1": [50, 0, 0],
+            "y1": [0] * 3,
+            "x2": [60, 10, 10],
+            "y2": [10] * 3,
+        }
+    )
+    a, b = image_matches(gt, preds, [0.5, 0.95])
+    assert (a.image, b.image) == ("a", "b")
+    assert a.plates.tolist() == [1] and len(a.conf) == 0 and a.ious.shape == (0, 1)
+    assert b.plates.tolist() == [0, 2] and b.conf.tolist() == [0.8, 0.3]
+    assert b.ious.tolist() == [[1.0, 0.0], [0.0, 1.0]]
+    assert [t.tolist() for t in b.tp] == [[True, True], [True, True]]
