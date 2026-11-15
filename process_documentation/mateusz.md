@@ -75,7 +75,7 @@ OCR bez `plate_fragments`. Nowej wersji zbioru na Kaggle jeszcze nie ma.
 | Krok | Decyzja | Powód |
 |---|---|---|
 | Stare wyniki | opisane w `results/experiment/baseline/PODSUMOWANIE.md` (IoU, CAR, puste odczyty, podział na `val`/`test`, błędy OCR) | punkt odniesienia |
-| Zbiór (`download_data.py`, `build_dataset.py`) | przebudowany lokalnie do `data/combined_v2`, stary zostaje jako `data/combined` | brak nowej wersji na Kaggle; Windows nie pozwolił zmienić nazwy `data/combined` (otwarty plik) |
+| Zbiór (`download_data.py`, `build_dataset.py`) | przebudowany lokalnie (najpierw do `data/combined_v2`, bo Windows blokował zmianę nazwy), potem podmieniony: nowy w `data/combined`, stary w `data/combined_kaggle_v1` | brak nowej wersji na Kaggle |
 | Wczytywanie zdjęć | `alpr.dataset.read_image` (`np.fromfile` + `cv2.imdecode`) w `alpr/build/sources.py` | `cv2.imread` na Windows nie otwiera ścieżek spoza ASCII (`Huracán` w data3), budowa przerywała się |
 | Kontrola zbioru | 8 zdjęć data1 zmieniło podział, brak wspólnych numerów `train`/`val`/`test` | zgodne z opisem poprawki |
 | Trening (`train_yolo.py --name plates_v2 --data data/combined_v2/...`) | te same parametry co 24.10 | porównywalność |
