@@ -93,6 +93,15 @@ def crop_path(dataset: str | Path, crop: str) -> Path:
     return nested if not path.exists() and nested.exists() else path
 
 
+def read_image(path: Path) -> np.ndarray | None:
+    """cv2.imread odporne na znaki spoza ASCII w ścieżce (Windows); None, gdy pliku nie da się wczytać."""
+    try:
+        data = np.fromfile(path, np.uint8)
+    except OSError:
+        return None
+    return cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
+
+
 def list_images(folder: Path) -> list[Path]:
     return sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMG_EXTS)
 
