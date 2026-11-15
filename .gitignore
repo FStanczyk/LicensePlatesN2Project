@@ -32,3 +32,5 @@ data/experiment/
 data/pose/
 results/experiment/*/crops/
 .coverage
+data/combined*/
+data/experiment*/

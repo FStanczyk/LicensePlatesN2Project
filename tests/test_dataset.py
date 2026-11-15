@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,6 +12,7 @@ from alpr.dataset import (
     load_plates,
     normalize_text,
     parse_polygon,
+    read_image,
     with_corners,
     write_csv,
 )
@@ -180,3 +182,12 @@ def test_with_corners_pomija_prostokaty_data1_i_brak_wielokata():
     )
     df = df.assign(source=df.plate_id.str.split("_").str[0])
     assert with_corners(df).plate_id.tolist() == ["data2_b_0", "data2_c_0"]
+
+
+def test_read_image_sciezka_spoza_ascii(tmp_path):
+    img = np.random.default_rng(0).integers(0, 256, (12, 20, 3), dtype=np.uint8)
+    path = tmp_path / "Huracán_żółw.png"
+    ok, buf = cv2.imencode(".png", img)
+    buf.tofile(path)
+    assert ok and np.array_equal(read_image(path), img)
+    assert read_image(tmp_path / "brak.png") is None

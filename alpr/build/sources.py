@@ -14,11 +14,10 @@ from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import cv2
 import numpy as np
 
 from alpr.config import DATA_DIR, DOWNLOADS, SEED
-from alpr.dataset import normalize_text, write_csv
+from alpr.dataset import normalize_text, read_image, write_csv
 from alpr.download import Archive, cached_md5, download, extract, verify_sums
 from alpr.geometry import four_corners
 
@@ -91,7 +90,7 @@ class PolishPlates(SourceDataset):
         rng = random.Random(SEED)
         split_of: dict[str, str] = {}
         for image in ET.parse(self.dir / "annotations.xml").getroot().iter("image"):
-            img = cv2.imread(str(self.photos / image.get("name")))
+            img = read_image(self.photos / image.get("name"))
             plates = []
             for box in image.iter("box"):
                 x1, y1, x2, y2 = (float(box.get(k)) for k in ("xtl", "ytl", "xbr", "ybr"))
@@ -206,7 +205,7 @@ class Uc3mLp(SampledSource):
         for photo in read_csv(self.dir / "labels.csv"):
             stem = photo["file"].removesuffix(".jpg")
             split = photo["split"] if photo["split"] == "test" else split_for(rng, 0.15, 0)
-            img = cv2.imread(str(self.photos / photo["file"]))
+            img = read_image(self.photos / photo["file"])
             plates = []
             for lp in json.loads((self.dir / "annotations" / f"{stem}.json").read_text())["lps"]:
                 code, raw = lp["lp_id"].split("-", 1)
@@ -268,7 +267,7 @@ class AutoRia(SampledSource):
 
     def build(self, writer: CombinedWriter) -> None:
         for i, plate in enumerate(read_csv(self.dir / "labels.csv")):
-            img = cv2.imread(str(self.photos / plate["file"]))
+            img = read_image(self.photos / plate["file"])
             fields = {
                 "text": normalize_text(plate["text"]),
                 "text_raw": plate["text"],

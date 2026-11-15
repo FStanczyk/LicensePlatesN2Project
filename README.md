@@ -94,6 +94,25 @@ policzyć ponownie po zbudowaniu nowej wersji zbioru i przetrenowaniu YOLO.
 * Sprawdzone bez błędów: AP z `evaluate` zgodne z walidacją ultralytics na tych samych wagach (AP50 0.361 wobec
   0.358, AP50-95 0.169 wobec 0.163), spójność `plates.csv` z etykietami YOLO, kopiami i wycinkami.
 
+**15.11.2026, blok 2 ponownie (Golba)**: wyniki po poprawkach z 08.11.2026. Zbiór przebudowany lokalnie
+(`download_data.py`, `build_dataset.py`; na Kaggle jest jeszcze stara wersja), YOLO wytrenowane od nowa
+(`plates_v2`: val P 0.976, R 0.933, mAP50 0.973, mAP50-95 0.781), eksperyment tylko na `test` (39 tablic).
+
+| | Czyste | Siła 1 | Siła 3 | Siła 5 |
+|---|---|---|---|---|
+| Wykryte tablice, każde zniekształcenie | 100% | 100% | 100% | 97.4-100% |
+| Odczyt bezbłędny, przyciemnienie | 61.5% | 46.2% | 28.2% | 10.3% |
+| Odczyt bezbłędny, rozmycie ruchem | 61.5% | 25.6% | 0% | 0% |
+| Odczyt bezbłędny, rozmycie ostrości | 61.5% | 10.3% | 0% | 0% |
+| Odczyt bezbłędny, rozjaśnienie | 61.5% | 64.1% | 71.8% | 51.3% |
+
+* Odczyt bezbłędny na czystych zdjęciach wzrósł z 48.7% (stary przebieg, tablice z `test`) do 61.5%,
+  głównie dzięki `plate_fragments` (mniej doklejonych znaków).
+* Wnioski z 24.10 się utrzymują: detekcja jest odporna, rozmycie od siły 3 uniemożliwia odczyt, przyciemnienie
+  szkodzi stopniowo już od siły 1, rozjaśnienie w sile 1-4 nie szkodzi.
+* Przy 39 tablicach jedna tablica to 2.6 punktu procentowego, więc różnice poniżej ok. 3 tablic to szum.
+* Przy budowie zbioru na Windows poprawione wczytywanie zdjęć z nazwami spoza ASCII (`alpr.dataset.read_image`).
+
 ---
 
 ## Możliwe eksperymenty
@@ -381,16 +400,17 @@ Wersja to `clean` albo `<zniekształcenie>_<siła>`.
 | `results/experiment/<name>/plates.csv` | tablica z ground truth obok dopasowanej detekcji: `text_true`, `detected`, `iou`, `det_conf`, `align`, `crop`, `text_pred`, `conf_ocr`, `text_ok` |
 | `results/experiment/<name>/summary.csv` | odsetek wykrytych (`detected`) i bezbłędnie odczytanych (`text_ok`) tablic na wersję |
 
-Baseline (`yolo11n`, 640 px, wytrenowany lokalnie, EasyOCR bez dostrajania), 81 tablic na wersję (`val` + `test`,
-przed poprawkami z 08.11.2026, do policzenia ponownie):
+Wyniki po poprawkach z 08.11.2026 (zbiór przebudowany lokalnie, `yolo11n` 640 px `plates_v2`, EasyOCR
+z `plate_fragments`), 39 tablic z `test` na wersję. Pełne tabele (IoU, CAR, puste odczyty, pewność OCR) w
+`results/experiment/v2/PODSUMOWANIE.md`, stary przebieg w `results/experiment/baseline/PODSUMOWANIE.md`.
 
 | Zniekształcenie | Siła 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
-| wykryte, każde zniekształcenie | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.988-1.000 |
-| odczyt bezbłędny, `brightness` | 0.358 | 0.407 | 0.432 | 0.420 | 0.444 | 0.444 |
-| odczyt bezbłędny, `darken` | 0.358 | 0.395 | 0.333 | 0.198 | 0.136 | 0.074 |
-| odczyt bezbłędny, `motion_blur` | 0.358 | 0.210 | 0.086 | 0.025 | 0.000 | 0.000 |
-| odczyt bezbłędny, `defocus_blur` | 0.358 | 0.198 | 0.111 | 0.012 | 0.000 | 0.000 |
+| wykryte, każde zniekształcenie | 1.000 | 1.000 | 1.000 | 1.000 | 0.974-1.000 | 0.974-1.000 |
+| odczyt bezbłędny, `brightness` | 0.615 | 0.641 | 0.641 | 0.718 | 0.641 | 0.513 |
+| odczyt bezbłędny, `darken` | 0.615 | 0.462 | 0.308 | 0.282 | 0.154 | 0.103 |
+| odczyt bezbłędny, `motion_blur` | 0.615 | 0.256 | 0.077 | 0.000 | 0.000 | 0.000 |
+| odczyt bezbłędny, `defocus_blur` | 0.615 | 0.103 | 0.077 | 0.000 | 0.000 | 0.000 |
 
 Detektor jest prawie niewrażliwy na te zniekształcenia, bo w treningu widział losowo zniekształcone kopie
 zdjęć (te same typy). Spadek skuteczności całego potoku wynika więc głównie z OCR.

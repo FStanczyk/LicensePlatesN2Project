@@ -63,3 +63,49 @@ Przy okazji poprawione: `crop_plates` na Windows (`os.path.commonpath` zwraca `\
 * metryki OCR: CAR, Plate Accuracy, F1 całego potoku (blok 3),
 * OCR na wycinkach z poprawionych zdjęć (CLAHE, gamma) po filtrach Stańczyka (blok 4),
 * analiza błędów EasyOCR: pasek UE czytany jako litera, I/L/1, 5/S (blok 5).
+
+## 15.11.2026: blok 2 ponownie, po poprawkach Włodarczyka
+
+### Punkt wyjścia
+Po scaleniu `main` (`9513e37`) README oznaczało wyniki z 24.10 jako do policzenia ponownie: przeciek w data1
+(7 numerów w `train` i w `val`/`test`), `val` w eksperymencie, ponowna kompresja tylko zniekształconych wersji,
+OCR bez `plate_fragments`. Nowej wersji zbioru na Kaggle jeszcze nie ma.
+
+### Przebieg
+| Krok | Decyzja | Powód |
+|---|---|---|
+| Stare wyniki | opisane w `results/experiment/baseline/PODSUMOWANIE.md` (IoU, CAR, puste odczyty, podział na `val`/`test`, błędy OCR) | punkt odniesienia |
+| Zbiór (`download_data.py`, `build_dataset.py`) | przebudowany lokalnie do `data/combined_v2`, stary zostaje jako `data/combined` | brak nowej wersji na Kaggle; Windows nie pozwolił zmienić nazwy `data/combined` (otwarty plik) |
+| Wczytywanie zdjęć | `alpr.dataset.read_image` (`np.fromfile` + `cv2.imdecode`) w `alpr/build/sources.py` | `cv2.imread` na Windows nie otwiera ścieżek spoza ASCII (`Huracán` w data3), budowa przerywała się |
+| Kontrola zbioru | 8 zdjęć data1 zmieniło podział, brak wspólnych numerów `train`/`val`/`test` | zgodne z opisem poprawki |
+| Trening (`train_yolo.py --name plates_v2 --data data/combined_v2/...`) | te same parametry co 24.10 | porównywalność |
+| Eksperyment (`build_experiment.py --dataset data/combined_v2`, `run_experiment.py --name v2`) | tylko `test` (domyślnie) | `val` wybiera `best.pt` |
+
+### Wynik
+YOLO `plates_v2`: val P 0.976, R 0.933, mAP50 0.973, mAP50-95 0.781.
+
+Odczyt bezbłędny (39 tablic na wersję, `results/experiment/v2/summary.csv`):
+
+| Zniekształcenie | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| `brightness` | 0.615 | 0.641 | 0.641 | 0.718 | 0.641 | 0.513 |
+| `darken` | 0.615 | 0.462 | 0.308 | 0.282 | 0.154 | 0.103 |
+| `motion_blur` | 0.615 | 0.256 | 0.077 | 0.000 | 0.000 | 0.000 |
+| `defocus_blur` | 0.615 | 0.103 | 0.077 | 0.000 | 0.000 | 0.000 |
+
+Wykryte 97.4-100% tablic w każdej wersji. CAR na czystych 0.887 (stary przebieg na `test`: 0.864).
+Szczegóły: `results/experiment/v2/PODSUMOWANIE.md`.
+
+Testy: 432 przechodzą; 4 nie przechodzą także bez moich zmian (2 golden testy przez OpenCV 5.0, 2 testy YOLO-pose
+przez brak uprawnień do symlinków na Windows). 12 testów wymaga `PYTHONUTF8=1` (pliki otwierane bez `encoding`).
+
+### Stan na koniec dnia
+* [x] podsumowanie starych wyników
+* [x] zbiór przebudowany lokalnie, YOLO przetrenowane, eksperyment policzony ponownie
+* [ ] nowa wersja zbioru na Kaggle (do uzgodnienia ze Stańczykiem)
+* [ ] metryki OCR w `alpr/ocr.py` (`character_accuracy`, `plate_accuracy`)
+
+### Do zrobienia (moja część)
+* metryki OCR: CAR, Plate Accuracy, F1 całego potoku w `alpr/ocr.py` (blok 3),
+* OCR na wycinkach z poprawionych zdjęć (CLAHE, gamma) po filtrach Stańczyka, głównie dla `darken` i słabego rozmycia (blok 4),
+* analiza błędów EasyOCR: 1/I, I/L, G/C, 0/O (blok 5).
