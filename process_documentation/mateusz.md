@@ -82,6 +82,17 @@ OCR bez `plate_fragments`. Nowej wersji zbioru na Kaggle jeszcze nie ma.
 | Eksperyment (`build_experiment.py --dataset data/combined_v2`, `run_experiment.py --name v2`) | tylko `test` (domyślnie) | `val` wybiera `best.pt` |
 
 ### Wynik
+Nowy zbiór (`data/combined`), tylko oryginały (bez kopii zniekształconych, które podwajają liczbę wierszy do 16584):
+
+| Źródło | Typ | train | val | test | Razem |
+|---|---|---|---|---|---|
+| data1 (Polska) | całe zdjęcia | 210 | 41 | 39 | 290 |
+| data2 (UC3M-LP, zamazane znaki) | całe zdjęcia | 539 | 101 | 144 | 784 |
+| data3 (AUTO.RIA) | gotowe wycinki | 6317 | 311 | 372 | 7000 |
+| Razem | | 7066 | 453 | 555 | 8074 |
+
+Całe zdjęcia (1074) mają razem 1292 tablice (train 905, val 175, test 212).
+
 YOLO `plates_v2`: val P 0.976, R 0.933, mAP50 0.973, mAP50-95 0.781.
 
 Odczyt bezbłędny (39 tablic na wersję, `results/experiment/v2/summary.csv`):
@@ -105,7 +116,23 @@ przez brak uprawnień do symlinków na Windows). 12 testów wymaga `PYTHONUTF8=1
 * [ ] nowa wersja zbioru na Kaggle (do uzgodnienia ze Stańczykiem)
 * [ ] metryki OCR w `alpr/ocr.py` (`character_accuracy`, `plate_accuracy`)
 
+### Kolejne kroki (ustalone 15.11.2026)
+Po poprawkach potok odczytuje bezbłędnie ponad 60% tablic na czystych zdjęciach (detekcja 97-100%). Dalsze
+badania skupiają się na rozmyciu, które niszczy odczyt najszybciej.
+
+1. Zbiór eksperymentu bez `brightness` i `darken`. `motion_blur` i `defocus_blur` po 10 poziomów siły zamiast 5
+   (`imagecorruptions` ma tylko 5, więc poziomy trzeba zdefiniować własnymi parametrami, np. przez interpolację
+   między poziomami biblioteki).
+2. Drugi silnik OCR do porównania z EasyOCR (np. Tesseract). W razie potrzeby dotrenowanie go na wycinkach `train`.
+3. Poprawa zdjęć zniszczonych rozmyciem (np. CLAHE, a także metody wyostrzające: unsharp masking, dekonwolucja)
+   i pomiar, ile utraconej skuteczności odczytu udaje się odzyskać.
+
+Do rozważenia: usunięcie ze zbioru zdjęć UV/IR (z kamer w podczerwieni), bo mogą pogarszać detekcję. `plates.csv`
+nie ma takiej etykiety; kandydaci to nocne zdjęcia UC3M-LP (`lighting == "night"`: 212 train, 36 val, 52 test),
+które trzeba przejrzeć i oznaczyć ręcznie, a potem porównać YOLO z nimi i bez nich.
+
+Tabela bloków (harmonogram w README) jest nieaktualna: trzeba ją przepisać pod powyższe plany.
+
 ### Do zrobienia (moja część)
 * metryki OCR: CAR, Plate Accuracy, F1 całego potoku w `alpr/ocr.py` (blok 3),
-* OCR na wycinkach z poprawionych zdjęć (CLAHE, gamma) po filtrach Stańczyka, głównie dla `darken` i słabego rozmycia (blok 4),
 * analiza błędów EasyOCR: 1/I, I/L, G/C, 0/O (blok 5).
