@@ -41,10 +41,10 @@ class FakePose:
     def __init__(self, weights):
         self.weights = weights
 
-    def predict(self, img, conf, imgsz, verbose):
+    def predict(self, imgs, conf, imgsz, verbose, **params):
         boxes = types.SimpleNamespace(xyxy=Array([[112, 108, 293, 178]]), conf=Array([0.8]))
         keypoints = types.SimpleNamespace(xy=Array([PLATE[[1, 2, 3, 0]]]))
-        return [types.SimpleNamespace(boxes=boxes, keypoints=keypoints)]
+        return [types.SimpleNamespace(boxes=boxes, keypoints=keypoints) for _ in imgs]
 
     def train(self, **params):
         FakePose.trained = params

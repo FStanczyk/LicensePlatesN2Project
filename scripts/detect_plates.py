@@ -5,6 +5,7 @@ Użycie:
     python3 scripts/detect_plates.py --weights best.pt --images zdjecia/
     python3 scripts/detect_plates.py --weights best.pt --split test              # całe zdjęcia z plates.csv
     python3 scripts/detect_plates.py --weights best.pt --split test --no-align   # bez prostowania
+    python3 scripts/detect_plates.py --weights best.pt --split test --batch 16   # wsady na GPU
 
 Wynik w --out (domyślnie results/detections/<nazwa>):
     detections.csv   image, det_id, conf, x1, y1, x2, y2, polygon, align (quad / rect / box), crop
@@ -34,6 +35,9 @@ def main() -> int:
     parser.add_argument("--conf", type=float, default=0.25, help="próg pewności")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--no-align", action="store_true", help="zwykły wycinek ramki")
+    parser.add_argument(
+        "--batch", type=int, default=1, help="zdjęcia na przebieg modelu (wsady z tego samego kształtu)"
+    )
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
 
@@ -50,7 +54,7 @@ def main() -> int:
     out = (args.out or RESULTS / "detections" / (base.name if args.images else args.split)).resolve()
 
     detector = PlateDetector(args.weights, args.conf, args.imgsz)
-    rows = crop_plates(detector, images, base, out, None if args.no_align else PlateAligner())
+    rows = crop_plates(detector, images, base, out, None if args.no_align else PlateAligner(), args.batch)
     write_csv(out / "detections.csv", rows, DETECTION_FIELDS)
 
     methods = Counter(r["align"] for r in rows if "align" in r)

@@ -12,11 +12,12 @@ import pandas as pd
 
 from alpr.dataset import format_polygon, parse_polygon, with_corners
 from alpr.detection.align import AlignedPlate, PlateAligner
-from alpr.detection.detector import Detector
+from alpr.detection.detector import Detection, Detector, detect_batch
 from alpr.detection.metrics import BOX, best_match, corner_error
 from alpr.geometry import box_corners, polygon_iou, warp
 
 READ_WORKERS = 8
+PNG_PARAMS = [cv2.IMWRITE_PNG_COMPRESSION, 1]
 DETECTION_FIELDS = ["image", "det_id", "conf", "x1", "y1", "x2", "y2", "polygon", "align", "crop"]
 
 
@@ -37,7 +38,42 @@ def read_images(images: list[str], base: Path) -> Iterator[tuple[str, np.ndarray
                     print(f"  {k}/{len(images)}")
 
 
-def predict_boxes(detector: Detector, images: list[str], base: Path) -> pd.DataFrame:
+def shape_groups(imgs: list[np.ndarray]) -> list[list[int]]:
+    """Indeksy obrazów pogrupowane po kształcie, w kolejności pierwszego wystąpienia."""
+    groups: dict[tuple, list[int]] = {}
+    for i, img in enumerate(imgs):
+        groups.setdefault(img.shape, []).append(i)
+    return list(groups.values())
+
+
+def detect_images(
+    detector: Detector, images: list[str], base: Path, batch: int = 1
+) -> Iterator[tuple[str, np.ndarray, list[Detection]]]:
+    """(image, obraz, detekcje) w kolejności images; po batch zdjęć naraz, wsad tylko z obrazów tego samego kształtu.
+
+    Przy jednakowym kształcie YOLO dopełnia obraz tak samo jak pojedynczy, więc wynik nie zależy od batch
+    (z dokładnością do numeryki wsadowych jąder GPU).
+    """
+    chunk: list[tuple[str, np.ndarray]] = []
+    for item in read_images(images, base):
+        chunk.append(item)
+        if len(chunk) < batch:
+            continue
+        yield from _detect_chunk(detector, chunk)
+        chunk = []
+    yield from _detect_chunk(detector, chunk)
+
+
+def _detect_chunk(detector: Detector, chunk: list[tuple[str, np.ndarray]]):
+    dets: list[list[Detection]] = [[] for _ in chunk]
+    for group in shape_groups([img for _, img in chunk]):
+        for i, found in zip(group, detect_batch(detector, [chunk[i][1] for i in group]), strict=True):
+            dets[i] = found
+    for (rel, img), found in zip(chunk, dets, strict=True):
+        yield rel, img, found
+
+
+def predict_boxes(detector: Detector, images: list[str], base: Path, batch: int = 1) -> pd.DataFrame:
     """image, conf, x1, y1, x2, y2, polygon (narożniki z YOLO-pose, inaczej puste)."""
     rows = [
         {
@@ -46,8 +82,8 @@ def predict_boxes(detector: Detector, images: list[str], base: Path) -> pd.DataF
             **dict(zip(BOX, det.box, strict=True)),
             "polygon": format_polygon(det.corners) if det.corners is not None else None,
         }
-        for rel, img in read_images(images, base)
-        for det in detector.detect(img)
+        for rel, _, dets in detect_images(detector, images, base, batch)
+        for det in dets
     ]
     return pd.DataFrame(rows, columns=["image", "conf", *BOX, "polygon"])
 
@@ -59,17 +95,23 @@ def crop_name(rel: str, k: int, common: str) -> str:
 
 
 def crop_plates(
-    detector: Detector, images: list[str], base: Path, out: Path, aligner: PlateAligner | None = None
+    detector: Detector,
+    images: list[str],
+    base: Path,
+    out: Path,
+    aligner: PlateAligner | None = None,
+    batch: int = 1,
+    crops: dict[str, np.ndarray] | None = None,
 ) -> list[dict]:
     """Zapisuje wycinki w out/crops; narożniki z YOLO-pose mają pierwszeństwo przed alignerem.
 
-    Zdjęcie bez detekcji daje wiersz z samym image.
+    Zdjęcie bez detekcji daje wiersz z samym image. crops: słownik do uzupełnienia wycinkami (klucz jak kolumna crop),
+    żeby OCR nie czytał ich ponownie z dysku.
     """
     common = os.path.commonpath([PurePosixPath(rel).parent.as_posix() for rel in images]).replace(os.sep, "/")
     (out / "crops").mkdir(parents=True, exist_ok=True)
     rows = []
-    for rel, img in read_images(images, base):
-        dets = detector.detect(img)
+    for rel, img, dets in detect_images(detector, images, base, batch):
         if not dets:
             rows.append({"image": rel})
         for k, det in enumerate(dets):
@@ -78,7 +120,9 @@ def crop_plates(
             else:
                 plate = aligner.align(img, det.box) if aligner else AlignedPlate.from_box(img, det.box)
             crop_rel = crop_name(rel, k, common)
-            cv2.imwrite(str(out / crop_rel), plate.crop)
+            cv2.imwrite(str(out / crop_rel), plate.crop, PNG_PARAMS)
+            if crops is not None:
+                crops[crop_rel] = plate.crop
             rows.append(
                 {
                     "image": rel,
