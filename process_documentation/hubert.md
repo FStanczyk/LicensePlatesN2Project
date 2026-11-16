@@ -430,3 +430,84 @@ testy `box_iou_matrix`, `desc_order`, `greedy_match`, `image_matches`, `read_ima
 ### Do zrobienia (moja część)
 * `eval_detection.py` na nowych wagach: czas na zdjęcie liczy teraz wczytywanie w tle, porównywać tylko z nowymi pomiarami (blok 6),
 * uprzedzić Golbę o zmianie `match_results` w `alpr/experiment.py` (blok 6).
+
+## 15-16.11.2026: przyspieszenie potoku, silniki OCR, odczyt rozmytych tablic, poprawka etykiet
+
+### Punkt wyjścia
+Cel: przyspieszyć potok (podobno "łopatologiczny", bez wsadów i akceleracji), potem dostroić modele. Lokalnie
+RTX 4070 12 GB, 20 rdzeni, 31 GB RAM; brak tokenu Kaggle, więc zbiór przebudowany ze źródeł (`download_data.py`,
+`build_dataset.py`, 7 min 35 s). Punkt odniesienia: `run_experiment.py` z `main` na 819 zdjęciach w 12.8 s,
+odczyt bezbłędny 0.259 (EasyOCR).
+
+### Przyspieszenie (`scripts/benchmark.py`)
+| Zmiana | Decyzja | Powód |
+|---|---|---|
+| `detect_batch`, `--batch 8` (wsad ze zdjęć jednego kształtu) | wdrożone jako opcja | detekcja 5.4 s -> 3.5 s; ramki różnią się o 1-2 px |
+| fp16 (w ultralytics 8.4 `quantize=16`) | odrzucone, kod usunięty | wolniej (6.2 s): `yolo11n` jest za mały, liczy się narzut jąder CUDA |
+| TensorRT | odrzucone, kod usunięty | 3.3 s, ale eksport 2.5 min i plik pod jedną kartę |
+| wycinki dla OCR w pamięci, PNG z kompresją 1 | wdrożone | wynik bit w bit ten sam |
+| `build_experiment.py --workers` (procesy po zdjęciach) | wdrożone | 180 s -> 58 s, pliki bajt w bajt te same; ponad 8 procesów nie przyspiesza |
+| EasyOCR bez CRAFT | odrzucone, kod usunięty | 7x szybciej, ale -5 tablic na czystych (pasek UE czytany jako litera) |
+| Richardson-Lucy przez FFT, 16 jąder naraz (`alpr/deblur.py`) | wdrożone | 510 ms -> 41 ms na wycinek; splot grupowy w cuDNN był wolniejszy (1.2 s) |
+
+Cały potok przyspieszył tylko z 12.8 s do ok. 11 s: na 4070 był już szybki, ok. 4 s to start Pythona i ładowanie modeli.
+
+### Strojenie EasyOCR (`benchmark.py --grid ocr_sweep`)
+Na zbiorze z `train` + `val` (251 tablic, `data/experiment_tune`), potwierdzenie raz na `test`. Pomagają
+`low_text=0.5`, `add_margin=0.05` i `mag_ratio=1.5`: na `test` czyste 0.564 -> 0.615, zniekształcone 0.259 -> 0.293.
+Reszta parametrów (`min_height`, `adjust_contrast`, `width_ths`, `beamsearch`) bez wpływu.
+
+### Silniki OCR (`scripts/train_ocr.py`, `alpr/recognizer.py`, `alpr/parseq.py`)
+| Silnik | Czyste (test) | Wszystkie wersje (test) | Uwagi |
+|---|---|---|---|
+| Tesseract (najlepszy wariant, Otsu) | 0.436 | 0.189 | uczony na dokumentach |
+| LPRNet od zera | 0.667 | 0.504 | 0.33 mln parametrów |
+| CRNN od zera, potem z wycinkami potoku i rozmyciem w augmentacji | 0.897 -> 0.932 | 0.631 -> 0.769 | średnio 3 ziarna |
+| TrOCR-small dotrenowany | | | na walidacji remis z CRNN (0.839), 25x większy; odrzucony |
+| PARSeq dotrenowany | 0.949 | 0.834 | najlepszy; bez dotrenowania już 0.951 na czystych (walidacja) |
+
+### Analiza błędów i odczyt rozmytych tablic (`alpr/deblur.py`)
+| Pomysł | Wynik (zniekształcone, walidacja) | Decyzja |
+|---|---|---|
+| wycinek z samej ramki zamiast `PlateAligner` | 0.883 -> 0.907 | wdrożone (`--no-align`); kontury przy rozmyciu się rozjeżdżają |
+| U-Net przed OCR (L1; L1 + strata odczytu PARSeq) | 0.907 -> 0.891; 0.909 | odrzucone |
+| Wiener, CLAHE, inna interpolacja, sama luminancja | -1.6 do +0.3 p.p. | odrzucone |
+| wyrocznia: Richardson-Lucy ze znanym jądrem | ruch siły 5: 0.76 -> 0.95 | informacja jest, trzeba znać jądro |
+| kąt ruchu z widma całego zdjęcia (Welch, dopasowanie log widma) | mediana błędu 1.0-1.2 stopnia | wdrożone (`estimate_blur`) |
+| 16 widoków po dekonwolucji, wybór po pewności (+0.1) | 0.907 -> 0.938 | wdrożone (`--deblur`) |
+| RL z regularyzacją TV | 0.942 -> 0.937-0.939 | odrzucone |
+| PARSeq dotrenowany na wycinkach po dekonwolucji, wybór pewniejszego z dwóch wag | 0.944 -> 0.956 | wdrożone (`--ocr-weights`) |
+| głosowanie, TTA, ponowna ocena hipotez po log p | +0.2 p.p. lub mniej | odrzucone |
+
+Zestaw promieni i kształtów jąder pochodzi z `imagecorruptions`: metoda zna rodzinę jąder, kąt i siłę szacuje sama.
+
+### Audyt etykiet (`results/label_audit/`)
+7290 oryginalnych tablic przeczytanych przez PARSeq, CRNN i EasyOCR; 7 podejrzanych (zgodny odczyt co najmniej
+2 silników inny niż etykieta), sprawdzone ręcznie: 3 błędy (`data1_205` SBE674C -> SBE5754C, `data3_00244`
+O2KP10 -> 02KP10, `data3_04171` HCC722 -> HCC772), 4 etykiety poprawne. Poprawki na gałęzi `poprawki_etykiet`
+(`data/data1/annotations.xml`, `data/data3/labels.csv`). `data1_205` to to samo auto co `data1_253` z `train`:
+po poprawce oba zdjęcia są w `test` (40 tablic), wcześniej był to cichy przeciek.
+
+### Wynik (poprawiony zbiór, wszystko przetrenowane, `test` 40 tablic x 21 wersji, średnio 3 ziarna)
+| Układ | Czyste | Zniekształcone | Rozmycie ostrości | Rozmycie ruchu |
+|---|---|---|---|---|
+| EasyOCR | 0.600 | 0.228 | | |
+| PARSeq, wycinek z ramki | 1.000 | 0.867 | 0.643 | 0.852 |
+| + dekonwolucja | 1.000 | 0.917 | 0.727 | 0.970 |
+| + PARSeq po dekonwolucji, pewniejszy z dwóch | 1.000 | 0.922 (0.916-0.926) | 0.745 | 0.970 |
+
+YOLO `plates_ref` na `val`: P 0.970, R 0.935, mAP50 0.977, mAP50-95 0.792 (8 min). Przeciek z `data1_253`
+zawyżał wynik o ok. 0.4 p.p. Kod w `alpr/` odtwarza wynik skryptów (ziarno 0: 0.916, ok. 1 min na 840 zdjęć).
+Wyniki: `results/benchmark/PODSUMOWANIE.md` i `pomiary.csv` (każda zmierzona konfiguracja), przebiegi na teście
+po poprawce w `results/experiment/ref_poprawka/` i `parseq_deblur_s0/`. Wagi w `runs/ocr/` i `runs/detect/plates_ref/`,
+surowe wyniki pośrednie w `runs/archiwum_wynikow/` (poza gitem).
+
+### Stan na koniec dnia
+* [x] przyspieszenie, strojenie EasyOCR, silniki OCR, odczyt z dekonwolucją w `alpr/` z testami (563 testy, ruff)
+* [x] audyt etykiet, 3 poprawki na gałęzi `poprawki_etykiet`, przetrenowanie na poprawionym zbiorze
+* [ ] commity (`przyspieszenie`, `poprawki_etykiet`) i PR-y
+* [ ] nowa wersja zbioru na Kaggle (Stańczyk)
+
+### Do zrobienia (moja część)
+* PR z poprawkami etykiet do przejrzenia przez Stańczyka, potem nowa wersja zbioru (blok 7),
+* analiza wpływu oświetlenia na detekcję na prawdziwych zdjęciach nocnych UC3M-LP (blok 9).

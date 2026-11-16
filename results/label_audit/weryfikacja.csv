@@ -1,0 +1,8 @@
+plate_id,source,split,text,tekst_zweryfikowany,werdykt,do_poprawy,zgodny_odczyt,image,crop
+data3_04171,data3,train,HCC722,HCC772,błąd etykiety,True,HCC772,,ocr/train/data3_04171.png
+data1_205_0,data1,test,SBE674C,SBE5754C,błąd etykiety,True,SBE5754C,detection/images/test/data1_205.jpg,ocr/test/data1_205_0.png
+data3_00069,data3,test,DD058AR,DD058AR,"etykieta poprawna, błąd modeli",False,D0058AR,,ocr/test/data3_00069.png
+data3_00244,data3,test,O2KP10,02KP10,błąd etykiety (O zamiast 0),True,02KP10,,ocr/test/data3_00244.png
+data3_00222,data3,test,W0CONAN,W0CONAN,etykieta poprawna,False,WOCONAN,,ocr/test/data3_00222.png
+data3_06714,data3,val,ZLBB216,ZLBB216,etykieta poprawna,False,ZLB8216,,ocr/val/data3_06714.png
+data3_04873,data3,train,PM00671,PM00671,"etykieta poprawna (tablica zagraniczna, O/0 trudne do odróżnienia)",False,PMO0671,,ocr/train/data3_04873.png

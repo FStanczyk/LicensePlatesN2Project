@@ -1,0 +1,8 @@
+plate_id,source,split,kind,text,zgodny_odczyt,silniki_zgodne,parseq,parseq_conf,crnn,easyocr,image,crop
+data3_04171,data3,train,plate_crop,HCC722,HCC772,3,HCC772,0.9066989421844482,HCC772,HCC772,,ocr/train/data3_04171.png
+data1_205_0,data1,test,full_photo,SBE674C,SBE5754C,2,SBE5754C,0.9997657537460327,SBE5754C,SBE5754,detection/images/test/data1_205.jpg,ocr/test/data1_205_0.png
+data3_00069,data3,test,plate_crop,DD058AR,D0058AR,2,00058AR,0.9897036552429199,D0058AR,D0058AR,,ocr/test/data3_00069.png
+data3_00244,data3,test,plate_crop,O2KP10,02KP10,2,02KP10,0.988688051700592,02KP10,02KPA0,,ocr/test/data3_00244.png
+data3_00222,data3,test,plate_crop,W0CONAN,WOCONAN,2,WOCONAN,0.9851142764091492,WOCONAN,ROCONAN,,ocr/test/data3_00222.png
+data3_06714,data3,val,plate_crop,ZLBB216,ZLB8216,2,ZLB8216,0.8757977485656738,ZLB8216,7821S,,ocr/val/data3_06714.png
+data3_04873,data3,train,plate_crop,PM00671,PMO0671,2,PMO0671,0.7543797492980957,PM00671,PMO0671,,ocr/train/data3_04873.png
