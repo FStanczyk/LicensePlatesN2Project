@@ -113,6 +113,25 @@ policzyć ponownie po zbudowaniu nowej wersji zbioru i przetrenowaniu YOLO.
 * Przy 39 tablicach jedna tablica to 2.6 punktu procentowego, więc różnice poniżej ok. 3 tablic to szum.
 * Przy budowie zbioru na Windows poprawione wczytywanie zdjęć z nazwami spoza ASCII (`alpr.dataset.read_image`).
 
+**15-16.11.2026 (Włodarczyk)**: przyspieszenie potoku, nowe silniki OCR i odczyt rozmytych tablic.
+Decyzje: `process_documentation/hubert.md`, wszystkie pomiary: `results/benchmark/PODSUMOWANIE.md` i `pomiary.csv`. Wyniki na poprawionym zbiorze (3 etykiety, niżej),
+`test` eksperymentu (40 tablic x 21 wersji), średnio z 3 ziaren, ustawienia wybrane na osobnym zbiorze walidacyjnym:
+
+| Układ | Czyste | Zniekształcone | Rozmycie ostrości | Rozmycie ruchu |
+|---|---|---|---|---|
+| EasyOCR (jak wyżej) | 0.600 | 0.228 | | |
+| CRNN (`train_ocr.py --model crnn`) | 0.958 | | | |
+| PARSeq dotrenowany, wycinek z samej ramki | 1.000 | 0.867 | 0.643 | 0.852 |
+| + dekonwolucja z jądrem z widma (`--deblur`) | 1.000 | 0.917 | 0.727 | 0.970 |
+| + drugi PARSeq uczony na wycinkach po dekonwolucji | 1.000 | 0.922 | 0.745 | 0.970 |
+
+* Zostaje głównie rozmycie ostrości siły 4-5 (24 i 17.7 na 40): dysk o promieniu 8-10 px wymazuje informację.
+* Zastrzeżenia: modele widziały w treningu zniekształcenia tego samego rodzaju (inne zdjęcia), dekonwolucja zna
+  rodzinę jąder `imagecorruptions` (kąt i siłę szacuje), przedział ufności przy 40 tablicach to ok. +-5 p.p.
+* Poprawione etykiety (sprawdzone ręcznie po zgodnym odczycie 3 silników, `results/label_audit/`): `data1_205`
+  `SBE674C` -> `SBE5754C` (to samo auto co `data1_253` w train, więc po poprawce oba zdjęcia są w test),
+  `data3_00244` `O2KP10` -> `02KP10`, `data3_04171` `HCC722` -> `HCC772`. Zbiór na Kaggle wymaga nowej wersji.
+
 ---
 
 ## Możliwe eksperymenty
@@ -274,6 +293,11 @@ python3 scripts/eval_alignment.py                               # jakość wyró
 python3 scripts/detect_plates.py --weights best.pt --images zdjecia/   # wycinki dla OCR
 ```
 
+`--batch N` w `detect_plates.py`, `eval_detection.py` i `run_experiment.py`: N zdjęć na przebieg modelu, wsad tylko
+ze zdjęć tego samego kształtu (w eksperymencie 21 wersji zdjęcia), około 1.5x szybciej; ramki różnią się o 1-2 px.
+fp16 i TensorRT sprawdzone i odrzucone (`process_documentation/hubert.md`, 15-16.11.2026). `--no-align` (wycinek
+z samej ramki) jest przy rozmytych zdjęciach lepszy dla OCR niż `PlateAligner` (+2.6 p.p. odczytów w eksperymencie).
+
 | Skrypt | Co robi | Wynik |
 |---|---|---|
 | `train_yolo.py` | fine-tuning YOLO (domyślnie `yolo11n.pt`, 640 px) na `detection/data.yaml`, stałe ziarno; `--pose`: `yolo11n-pose.pt` na zbiorze z narożnikami (eksport do `data/pose/`) | `runs/detect/<name>/weights/best.pt` |
@@ -351,10 +375,35 @@ zdjęcie bez detekcji ma jeden wiersz z pustym `det_id`.
 
 ## OCR
 
-Wejście to `detections.csv` z `detect_plates.py`. Silnik: EasyOCR (model angielski, znaki tylko A-Z i 0-9,
-GPU, jeśli jest). Fragmenty tekstu niższe niż 0.6 najwyższego (napisy z ramki, "PL" z paska UE) są pomijane,
-reszta jest sklejana w kolejności czytania (tablice dwuwierszowe: górny wiersz pierwszy).
-Modele EasyOCR pobierają się raz do `~/.EasyOCR/`.
+Wejście to `detections.csv` z `detect_plates.py`. Silniki (`--engine`, parametry przez `--param klucz=wartość`):
+
+| Silnik | Co to jest | Uwagi |
+|---|---|---|
+| `easyocr` (domyślny) | EasyOCR, model angielski, znaki A-Z i 0-9 | fragmenty niższe niż 0.6 najwyższego są pomijane; strojenie: `--param batch_size=16 mag_ratio=1.5 low_text=0.5 add_margin=0.05` (+3.6 p.p. w eksperymencie) |
+| `tesseract` | Tesseract 5 (`--psm 7`) | wymaga programu `tesseract` w systemie; najsłabszy |
+| `crnn`, `lprnet` | własne sieci CTC uczone od zera (`alpr/recognizer.py`) | `train_ocr.py --model crnn` |
+| `parseq` | PARSeq (strhub) dotrenowany na tablicach (`alpr/parseq.py`) | `pip install -e ".[parseq]"`, najlepszy |
+
+Wagi sieci: `--param weights=runs/ocr/<model>/best.pt` (domyślnie `runs/ocr/<silnik>/best.pt`). Modele EasyOCR
+pobierają się raz do `~/.EasyOCR/`, wagi startowe PARSeq do `~/.cache/torch/hub/`.
+
+```bash
+python3 scripts/train_ocr.py --model crnn --jitter 4 --detector best.pt --blur 0.3 --extra data/experiment_tune
+python3 scripts/train_ocr.py --model parseq --detector best.pt --extra data/experiment_tune --out runs/ocr/parseq_s0
+python3 scripts/train_ocr.py --model parseq --init runs/ocr/parseq_s0/best.pt --deconv data/experiment_tune \
+    --detector best.pt --select data/experiment_val --epochs 6 --lr 3e-5 --eval-every 2 --out runs/ocr/parseq_dec_s0
+```
+
+Dane do uczenia: wycinki data3, tablice data1 z polygonu (`--jitter`: kopie z przesuniętymi narożnikami), wycinki
+z naszego YOLO na wszystkich wersjach zdjęć `train` (`--extra`), augmentacja na GPU (`--blur`: rozmycie).
+`--deconv`: wycinki rozmytych wersji po dekonwolucji prawdziwym jądrem (`alpr.deblur.deconv_training_crops`).
+CRNN uczy się ok. 2 min, PARSeq ok. 6 min na RTX 4070.
+
+Odczyt rozmytych tablic (`alpr/deblur.py`, `run_experiment.py --deblur`): kąt ruchu szacujemy z uśrednionego widma
+mocy całego zdjęcia (mediana błędu 1 stopień), każdy wycinek dostaje 16 widoków (bez zmian, 5 dysków, 5 sił ruchu
+w 2 kierunkach) po dekonwolucji Richardsona-Lucy na GPU (splot przez FFT, ok. 40 ms na wycinek), a widok po
+dekonwolucji wygrywa tylko, gdy podnosi pewność odczytu o `--margin` (0.1). `--ocr-weights a b`: kilka wag,
+wygrywa pewniejszy odczyt.
 
 ```bash
 python3 scripts/train_yolo.py --device 0                                             # raz: runs/detect/plates/weights/best.pt
@@ -392,8 +441,21 @@ python3 scripts/run_experiment.py --weights runs/detect/plates/weights/best.pt
 
 | Skrypt | Co robi | Wynik |
 |---|---|---|
-| `build_experiment.py` | wybiera ground truth i zapisuje wersje zdjęć (`--splits`, `--corruptions`) | `data/experiment/images/<wersja>/`, `ground_truth.csv` |
-| `run_experiment.py` | detekcja i wyrównanie, OCR, dopasowanie do ground truth (IoU >= 0.5, jak w metrykach detekcji) | `results/experiment/<name>/` |
+| `build_experiment.py` | wybiera ground truth i zapisuje wersje zdjęć (`--splits`, `--corruptions`, `--workers`: procesy, wynik bajt w bajt ten sam, 3x szybciej) | `data/experiment/images/<wersja>/`, `ground_truth.csv` |
+| `run_experiment.py` | detekcja i wyrównanie, OCR, dopasowanie do ground truth (IoU >= 0.5, jak w metrykach detekcji); `--no-align`, `--deblur`, `--ocr-weights` jak w sekcji OCR | `results/experiment/<name>/` |
+| `compare_results.py` | dwa `plates.csv` na wspólnych wersjach i tablicach: różnica odsetka bezbłędnych odczytów i jej 95% przedział (bootstrap sparowany po tablicach); `--ground-truth` liczy od nowa według aktualnych etykiet | tabela w terminalu |
+| `benchmark.py` | czas i jakość siatek ustawień (`--grid detection`, `ocr_sweep`, `engines`) z 95% przedziałami bootstrap po tablicach | `results/benchmark/<name>/timings.csv` |
+
+Do strojenia i wyboru epok służy osobny zbiór z `train` i `val`, żeby nie dopasowywać ustawień do `test`:
+`build_experiment.py --splits train val --out data/experiment_tune`, a z niego same tablice z `val` jako
+`data/experiment_val` (ten sam `ground_truth.csv` przefiltrowany po `split`).
+
+Najlepszy układ (wynik w sekcji "Stan prac", 15-16.11.2026), ok. 1 min na 840 zdjęć:
+
+```bash
+python3 scripts/run_experiment.py --weights runs/detect/plates_ref/weights/best.pt --batch 8 --no-align --deblur \
+    --engine parseq --ocr-weights runs/ocr/parseq_s0/best.pt runs/ocr/parseq_dec_s0/best.pt --name parseq_deblur
+```
 
 Każdy krok z gotowym wynikiem jest pomijany (`--force`, aby policzyć od nowa).
 Wersja to `clean` albo `<zniekształcenie>_<siła>`.
@@ -438,13 +500,18 @@ Skrypty wymagają zainstalowanego pakietu (`pip install -e .`). Najczęściej u�
 | `alpr/build/` | `sources.py` (klasa na każde źródło: pobieranie, wybór podzbioru, składanie), `writer.py` (`CombinedWriter`), `corruptions.py` | Stańczyk |
 | `alpr/preprocessing.py` | `enhance(img, method)`: szkielet, metody do uzupełnienia | Stańczyk |
 | `alpr/detection/` | `PlateDetector`, `PlateAligner`, `training.py`, `pipeline.py` (przebiegi po zdjęciach), `metrics.py` | Włodarczyk |
-| `alpr/experiment.py` | zbiór eksperymentu: `ground_truth`, `build_experiment`, `match_results`, `summary` | Golba |
-| `alpr/ocr.py` | `read_plate(crop, engine)` (silnik `easyocr`), `read_crops` (odczyt wycinków z `detections.csv`); metryki OCR do uzupełnienia | Golba |
+| `alpr/experiment.py` | zbiór eksperymentu: `ground_truth`, `build_experiment` (`workers`), `images_by_source`, `match_results`, `summary` | Golba |
+| `alpr/ocr.py` | silniki (`easyocr`, `tesseract`, `crnn`, `lprnet`, `parseq`), `read_batch`, `read_crops`, odczyt z dekonwolucją (`gate`, `read_deblurred`, `read_crops_deblurred`), metryki `character_accuracy`, `plate_accuracy` | Golba |
+| `alpr/recognizer.py` | CRNN i LPRNet (CTC) uczone od zera, dane do uczenia OCR (`load_split`), augmentacja na GPU, `Recognizer` (wagi jako silnik) | Włodarczyk |
+| `alpr/parseq.py` | PARSeq: `create`, `predict`, `train_parseq`, `deblur_select` | Włodarczyk |
+| `alpr/deblur.py` | jądra rozmycia (jak `imagecorruptions`), `estimate_blur` (jądro z widma zdjęcia), `richardson_lucy` (GPU, FFT), `deconv_views` | Włodarczyk |
+| `alpr/benchmark.py` | pomiar czasu i jakości ustawień, `bootstrap_ci`, `DeblurScorer` | Włodarczyk |
 
 Nowa funkcja trafia do `alpr/`, a skrypt tylko ją wywołuje. Testy i lint:
 
 ```bash
 pip install -e ".[dev]"            # pytest, ruff (".[build,dev]" razem z testami budowy zbioru)
+pip install -e ".[parseq]"         # PARSeq (strhub z przejrzanego commita 1902db0)
 pytest                             # testy w tests/, bez danych i GPU
 ruff check . && ruff format .
 ```

@@ -7,6 +7,9 @@ best.pt i wczesne zatrzymanie YOLO). Zniekształcenia nie zmieniają geometrii, 
     data/experiment/ground_truth.csv                jedna linia na (wersja, tablica)
 """
 
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from pathlib import Path, PurePosixPath
 
 import cv2
@@ -65,35 +68,60 @@ def ground_truth(dataset: Path, splits: tuple[str, ...] = SPLITS) -> pd.DataFram
     return df[df.split.isin(splits)]
 
 
-def build_experiment(
-    dataset: Path, out: Path, splits: tuple[str, ...] = SPLITS, corruptions: tuple[str, ...] = CORRUPTIONS
-) -> pd.DataFrame:
-    """Zapisuje wersje zdjęć w out/images i zwraca ground truth dla wszystkich wersji."""
+def images_by_source(gt: pd.DataFrame) -> list[str]:
+    """Zdjęcia z wersjami jednego zdjęcia źródłowego obok siebie (ten sam kształt, więc wspólny wsad detekcji)."""
+    return gt.drop_duplicates("image").sort_values(["source_image", "image"]).image.tolist()
+
+
+def build_image(
+    item: tuple[str, list[dict]], dataset: Path, out: Path, corruptions: tuple[str, ...] = CORRUPTIONS
+) -> list[dict]:
+    """Wszystkie wersje jednego zdjęcia zapisane w out/images; wiersze ground truth dla nich."""
     from alpr.build.corruptions import apply_corruption
 
-    gt = ground_truth(dataset, splits)
+    image, plates = item
+    name = PurePosixPath(image).name
+    img = cv2.imread(str(dataset / image))
     rows = []
-    for i, (image, plates) in enumerate(gt.groupby("image"), 1):
-        name = PurePosixPath(image).name
-        img = cv2.imread(str(dataset / image))
-        for variant, corruption, severity in variants(corruptions):
-            rel = f"images/{variant}/{name}"
-            (out / rel).parent.mkdir(parents=True, exist_ok=True)
-            version = img if severity == 0 else apply_corruption(img, corruption, severity, f"{name}:{variant}")
-            cv2.imwrite(str(out / rel), version, [cv2.IMWRITE_JPEG_QUALITY, 95])
-            rows += [
-                {
-                    **plate,
-                    "variant": variant,
-                    "artificial_corruption": corruption,
-                    "artificial_severity": severity,
-                    "image": rel,
-                    "source_image": image,
-                }
-                for plate in plates.to_dict("records")
-            ]
-        if i % 20 == 0:
-            print(f"  {i}/{gt.image.nunique()}")
+    for variant, corruption, severity in variants(corruptions):
+        rel = f"images/{variant}/{name}"
+        (out / rel).parent.mkdir(parents=True, exist_ok=True)
+        version = img if severity == 0 else apply_corruption(img, corruption, severity, f"{name}:{variant}")
+        cv2.imwrite(str(out / rel), version, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        rows += [
+            {
+                **plate,
+                "variant": variant,
+                "artificial_corruption": corruption,
+                "artificial_severity": severity,
+                "image": rel,
+                "source_image": image,
+            }
+            for plate in plates
+        ]
+    return rows
+
+
+def build_experiment(
+    dataset: Path,
+    out: Path,
+    splits: tuple[str, ...] = SPLITS,
+    corruptions: tuple[str, ...] = CORRUPTIONS,
+    workers: int = 1,
+) -> pd.DataFrame:
+    """Zapisuje wersje zdjęć w out/images i zwraca ground truth dla wszystkich wersji.
+
+    workers > 1: zdjęcia w osobnych procesach; losowość zniekształceń zależy tylko od nazwy, więc wynik ten sam.
+    """
+    gt = ground_truth(dataset, splits)
+    items = [(image, plates.to_dict("records")) for image, plates in gt.groupby("image")]
+    build = partial(build_image, dataset=dataset, out=out, corruptions=corruptions)
+    rows = []
+    with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("forkserver")) as pool:
+        for i, part in enumerate(pool.map(build, items) if workers > 1 else map(build, items), 1):
+            rows += part
+            if i % 20 == 0:
+                print(f"  {i}/{len(items)}")
     return pd.DataFrame(rows, columns=GT_FIELDS).astype(dict.fromkeys(BOX, int))
 
 

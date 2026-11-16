@@ -4,6 +4,7 @@
 Użycie:
     python3 scripts/ocr_plates.py --detections results/detections/test/detections.csv
     python3 scripts/ocr_plates.py --detections results/detections/test/detections.csv --engine easyocr --force
+    python3 scripts/ocr_plates.py --detections detections.csv --engine parseq --param weights=runs/ocr/parseq_s0/best.pt
 
 Wynik obok detections.csv: ocr_<silnik>.csv z kolumnami detections.csv oraz
     text      odczyt znormalizowany jak kolumna text w plates.csv (A-Z, 0-9)
@@ -16,13 +17,16 @@ import sys
 from pathlib import Path
 
 from alpr.detection.pipeline import read_detections
-from alpr.ocr import ENGINES, read_crops
+from alpr.ocr import engine_names, parse_params, read_crops
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--detections", type=Path, required=True, help="detections.csv z detect_plates.py")
-    parser.add_argument("--engine", default="easyocr", choices=sorted(ENGINES))
+    parser.add_argument("--engine", default="easyocr", choices=engine_names())
+    parser.add_argument(
+        "--param", nargs="*", default=[], help="parametry silnika, np. decoder=beamsearch mag_ratio=1.5"
+    )
     parser.add_argument("--out", type=Path, help="domyślnie ocr_<silnik>.csv obok detections.csv")
     parser.add_argument("--force", action="store_true", help="policz ponownie, nawet jeśli wynik już jest")
     args = parser.parse_args()
@@ -33,7 +37,7 @@ def main() -> int:
         return 0
     rows = read_detections(args.detections)
     print(f"OCR ({args.engine}) dla {rows.crop.notna().sum()} wycinków z {args.detections}")
-    result = read_crops(rows, args.detections.parent, args.engine)
+    result = read_crops(rows, args.detections.parent, args.engine, **parse_params(args.param))
     result.to_csv(out, index=False)
 
     read = result[result.crop.notna()]

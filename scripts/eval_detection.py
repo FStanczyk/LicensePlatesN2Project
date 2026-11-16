@@ -43,6 +43,9 @@ def main() -> int:
     parser.add_argument("--images-root", type=Path, help="obrazy o tych samych ścieżkach co zbiór (np. po filtrze)")
     parser.add_argument("--conf", type=float, default=0.25, help="próg pewności dla P/R/F1")
     parser.add_argument("--imgsz", type=int, default=640)
+    parser.add_argument(
+        "--batch", type=int, default=1, help="zdjęcia na przebieg modelu (wsady z tego samego kształtu)"
+    )
     parser.add_argument("--name", default="baseline")
     args = parser.parse_args()
 
@@ -57,7 +60,7 @@ def main() -> int:
         print(f"Predykcje dla {len(images)} zdjęć ({args.split}) z {images_root}")
         detector = ClassicalDetector() if args.classical else PlateDetector(args.weights, 0.001, args.imgsz)
         start = time.perf_counter()
-        preds = predict_boxes(detector, images, images_root)
+        preds = predict_boxes(detector, images, images_root, args.batch)
         print(f"Czas: {(time.perf_counter() - start) / len(images) * 1000:.0f} ms/zdjęcie (z wczytaniem)")
         preds.to_csv(out / "predictions.csv", index=False)
 

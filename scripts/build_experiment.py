@@ -17,6 +17,7 @@ Wynik w --out (domyślnie data/experiment):
 """
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -33,6 +34,7 @@ def main() -> int:
     parser.add_argument("--splits", nargs="+", default=list(EXPERIMENT_SPLITS), choices=SPLITS)
     parser.add_argument("--corruptions", nargs="+", default=list(CORRUPTIONS))
     parser.add_argument("--out", type=Path, default=EXPERIMENT)
+    parser.add_argument("--workers", type=int, default=os.cpu_count(), help="procesy (wynik nie zależy od liczby)")
     parser.add_argument("--force", action="store_true", help="usuń istniejący zbiór i zbuduj od nowa")
     args = parser.parse_args()
 
@@ -41,7 +43,7 @@ def main() -> int:
         print(f"Zbiór już jest: {gt_path} (--force, aby zbudować od nowa)")
         return 0
     shutil.rmtree(args.out, ignore_errors=True)
-    gt = build_experiment(args.dataset.resolve(), args.out, tuple(args.splits), tuple(args.corruptions))
+    gt = build_experiment(args.dataset.resolve(), args.out, tuple(args.splits), tuple(args.corruptions), args.workers)
     gt.to_csv(gt_path, index=False)
 
     clean = gt[gt.variant == "clean"]

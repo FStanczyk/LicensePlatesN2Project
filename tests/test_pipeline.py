@@ -11,15 +11,18 @@ import yaml
 
 from alpr.dataset import add_derived, write_csv
 from alpr.detection import Detection, PlateAligner, PlateDetector
+from alpr.detection.detector import detect_batch
 from alpr.detection.pipeline import (
     DETECTION_FIELDS,
     alignment_example,
     crop_name,
     crop_plates,
+    detect_images,
     evaluate_alignment,
     predict_boxes,
     read_detections,
     read_images,
+    shape_groups,
 )
 from alpr.detection.training import resolved_yaml, train_detector
 
@@ -43,10 +46,17 @@ class FakeYOLO:
     def __init__(self, weights):
         self.weights = weights
 
-    def predict(self, img, conf, imgsz, verbose):
+    calls: list[int] = []
+
+    def predict(self, imgs, conf, imgsz, verbose, **params):
+        FakeYOLO.calls.append(len(imgs))
+        return [self.result(img) for img in imgs]
+
+    @staticmethod
+    def result(img):
         boxes = [[10, 10, 50, 30], [60, 40, 90, 55]] if img.mean() > 0 else np.zeros((0, 4))
         confs = [0.3, 0.9][: len(boxes)]
-        return [types.SimpleNamespace(boxes=types.SimpleNamespace(xyxy=Array(boxes), conf=Array(confs)))]
+        return types.SimpleNamespace(boxes=types.SimpleNamespace(xyxy=Array(boxes), conf=Array(confs)))
 
     def train(self, **params):
         FakeYOLO.trained = params
@@ -103,7 +113,7 @@ def test_train_detector(monkeypatch, tmp_path):
 
 def test_detect_puste():
     detector = PlateDetector.__new__(PlateDetector)
-    detector.model, detector.conf, detector.imgsz = FakeYOLO("x"), 0.25, 640
+    detector.model, detector.conf, detector.imgsz, detector.device = FakeYOLO("x"), 0.25, 640, None
     assert detector.detect(np.zeros((10, 10, 3), np.uint8)) == []
     assert all(isinstance(d, Detection) for d in detector.detect(np.ones((80, 120, 3), np.uint8)))
 
@@ -112,13 +122,13 @@ def test_detector_przekazuje_parametry(monkeypatch):
     seen = {}
 
     class Spy(FakeYOLO):
-        def predict(self, img, conf, imgsz, verbose):
-            seen.update(conf=conf, imgsz=imgsz, verbose=verbose)
-            return super().predict(img, conf, imgsz, verbose)
+        def predict(self, imgs, conf, imgsz, verbose, **params):
+            seen.update(conf=conf, imgsz=imgsz, verbose=verbose, **params)
+            return super().predict(imgs, conf, imgsz, verbose)
 
     monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=Spy))
-    PlateDetector("x.pt", conf=0.4, imgsz=320).detect(np.ones((8, 8, 3), np.uint8))
-    assert seen == {"conf": 0.4, "imgsz": 320, "verbose": False}
+    PlateDetector("x.pt", conf=0.4, imgsz=320, device="0").detect(np.ones((8, 8, 3), np.uint8))
+    assert seen == {"conf": 0.4, "imgsz": 320, "verbose": False, "batch": 1, "device": "0"}
 
 
 def test_read_images_pomija_niewczytywalne(images, capsys):
@@ -260,3 +270,46 @@ def test_read_images_w_tle_zachowuje_kolejnosc_i_pamiec(tmp_path, monkeypatch, c
 
 def test_read_images_puste():
     assert list(read_images([], ".")) == []
+
+
+def test_shape_groups_kolejnosc_pierwszego_wystapienia():
+    imgs = [np.zeros(s, np.uint8) for s in [(4, 4, 3), (2, 2, 3), (4, 4, 3), (2, 2, 3), (3, 3, 3)]]
+    assert shape_groups(imgs) == [[0, 2], [1, 3], [4]]
+
+
+@pytest.mark.parametrize("batch", [1, 2, 3, 10])
+def test_detect_images_wsad_jak_pojedynczo(detector, tmp_path, batch):
+    names = []
+    for i, (h, v) in enumerate([(80, 200), (60, 0), (80, 200), (60, 100), (80, 0)]):
+        cv2.imwrite(str(tmp_path / f"{i}.png"), np.full((h, 120, 3), v, np.uint8))
+        names.append(f"{i}.png")
+    FakeYOLO.calls = []
+    got = [(rel, len(dets)) for rel, _, dets in detect_images(detector, names, tmp_path, batch)]
+    assert got == [("0.png", 2), ("1.png", 0), ("2.png", 2), ("3.png", 2), ("4.png", 0)]
+    assert max(FakeYOLO.calls) <= batch and sum(FakeYOLO.calls) == 5
+
+
+def test_detect_images_wsad_jednego_ksztaltu(detector, tmp_path):
+    for i in range(4):
+        cv2.imwrite(str(tmp_path / f"{i}.png"), np.full((40, 40, 3), 9, np.uint8))
+    FakeYOLO.calls = []
+    list(detect_images(detector, [f"{i}.png" for i in range(4)], tmp_path, batch=4))
+    assert FakeYOLO.calls == [4]
+
+
+def test_detect_batch_bez_wsadow():
+    class Single:
+        def detect(self, img):
+            return [img.shape[0]]
+
+    assert detect_batch(Single(), [np.zeros((2, 1)), np.zeros((5, 1))]) == [[2], [5]]
+
+
+def test_crop_plates_wsad_i_wycinki_w_pamieci(detector, images, tmp_path):
+    base, names = images
+    crops = {}
+    rows = crop_plates(detector, names, base, tmp_path / "w", batch=8, crops=crops)
+    assert rows == crop_plates(detector, names, base, tmp_path / "p")
+    assert sorted(crops) == ["crops/jasne.png_0.png", "crops/jasne.png_1.png"]
+    for rel, crop in crops.items():
+        assert np.array_equal(cv2.imread(str(tmp_path / "w" / rel)), crop)

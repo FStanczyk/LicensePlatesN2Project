@@ -13,6 +13,7 @@ from alpr.experiment import (
     SPLITS,
     build_experiment,
     ground_truth,
+    images_by_source,
     match_results,
     summary,
     variants,
@@ -207,3 +208,29 @@ def test_summary_kolejnosc_wersji_i_srednie():
     assert table.artificial_corruption.tolist() == ["none", "darken"]
     assert table.plates.tolist() == [2, 2]
     assert table.detected.tolist() == [1.0, 0.5] and table.text_ok.tolist() == [0.5, 0.0]
+
+
+def test_build_experiment_procesy_jak_jeden(dataset, tmp_path):
+    pytest.importorskip("imagecorruptions", reason='wymaga extras [build]: pip install -e ".[build]"')
+    kinds = ("darken", "motion_blur")
+    one = build_experiment(dataset, tmp_path / "a", ("val", "test"), kinds)
+    many = build_experiment(dataset, tmp_path / "b", ("val", "test"), kinds, workers=3)
+    pd.testing.assert_frame_equal(one, many)
+    for rel in one.image:
+        assert (tmp_path / "a" / rel).read_bytes() == (tmp_path / "b" / rel).read_bytes()
+
+
+def test_images_by_source_wersje_obok_siebie():
+    gt = pd.DataFrame(
+        {
+            "image": [
+                "images/a_1/y.jpg",
+                "images/a_1/x.jpg",
+                "images/clean/x.jpg",
+                "images/clean/y.jpg",
+                "images/clean/x.jpg",
+            ],
+            "source_image": ["y.jpg", "x.jpg", "x.jpg", "y.jpg", "x.jpg"],
+        }
+    )
+    assert images_by_source(gt) == ["images/a_1/x.jpg", "images/clean/x.jpg", "images/a_1/y.jpg", "images/clean/y.jpg"]
