@@ -633,7 +633,7 @@
   </image>
   <image id="119" name="205.jpg" width="4000" height="1800">
     <box label="plate" source="manual" occluded="0" xtl="1372.87" ytl="977.98" xbr="1589.29" ybr="1037.77" z_order="0">
-      <attribute name="plate number">SBE674C</attribute>
+      <attribute name="plate number">SBE5754C</attribute>
     </box>
   </image>
   <image id="120" name="206.jpg" width="4000" height="1800">
