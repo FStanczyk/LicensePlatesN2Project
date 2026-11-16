@@ -251,6 +251,12 @@ kaggle datasets version -p data/combined -m "opis zmian" -r zip   # nowa wersja 
 * Logika obu skryptów jest w `alpr/build/` (każde źródło to klasa w `sources.py`, zapis w `writer.py`).
   `tests/test_build_golden.py` i `tests/test_build_combine_golden.py` pilnują, żeby po zmianach w kodzie
   wychodził ten sam zbiór co na Kaggle.
+* Poprawki etykiet (16.11.2026, Włodarczyk, za zgodą Stańczyka): 3 numery sprawdzone ręcznie po tym, jak trzy
+  silniki OCR zgodnie odczytały inny tekst (lista 7 podejrzanych i werdykty: `results/label_audit/` na gałęzi
+  `przyspieszenie`). `data/data1/annotations.xml`: `SBE674C` -> `SBE5754C` (zdjęcie 205; to samo auto co zdjęcie 253,
+  więc oba trafiają teraz do `test`), `data/data3/labels.csv`: `O2KP10` -> `02KP10`, `HCC722` -> `HCC772`.
+  Liczba wierszy `plates.csv` bez zmian (16584), zmieniają się 3 numery i podział 2 wierszy (`data1_253`).
+  Golden testy przechodzą (sprawdzają kod na danych syntetycznych); zbiór na Kaggle wymaga nowej wersji.
 
 ---
 

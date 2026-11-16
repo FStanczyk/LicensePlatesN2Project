@@ -243,7 +243,7 @@ test/21402771-21402771--RDE56016-Volvo_FH_0.png,autoriaNumberplateOcrEu-2023-06-
 test/21402776-21402776--LZ46726-FIAT_Ducato_1.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402776-21402776--LZ46726-FIAT_Ducato_1.png,WG3428G,pl,1
 test/21402801-21402801--WWL5492K-MAN_TGX_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402801-21402801--WWL5492K-MAN_TGX_0.png,WWL5492K,pl,1
 test/21402819-21402819--ZSW21200-Mercedes-Benz_S-Klasse_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402819-21402819--ZSW21200-Mercedes-Benz_S-Klasse_0.png,ZSW21200,pl,1
-test/21402839-21402839--O2KP10-Audi_A4_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402839-21402839--O2KP10-Audi_A4_0.png,O2KP10,pl,1
+test/21402839-21402839--O2KP10-Audi_A4_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402839-21402839--O2KP10-Audi_A4_0.png,02KP10,pl,1
 test/21402844-21402844--PO4XV60-Skoda_Superb_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402844-21402844--PO4XV60-Skoda_Superb_0.png,PO4XV60,pl,1
 test/21402860-21402860--PWR02GW-Audi_80_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402860-21402860--PWR02GW-Audi_80_0.png,PWR02GW,pl,1
 test/21402972-21402972--WM8124R-DAF_XF_0.png,autoriaNumberplateOcrEu-2023-06-26/test/img/21402972-21402972--WM8124R-DAF_XF_0.png,WM8124R,pl,1
@@ -4170,7 +4170,7 @@ train/20135767-20135767--BES800-BMW_Z4_0.png,autoriaNumberplateOcrEu-2023-06-26/
 train/20188880-20188880--KBM064-BMW_X6_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20188880-20188880--KBM064-BMW_X6_0.png,KBM064,mt,1
 train/20211115-20211115--IBS505-Nissan_Juke_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20211115-20211115--IBS505-Nissan_Juke_0.png,IBS505,mt,1
 train/20215673-20215673--RUN147-Alfa_Romeo_147_1.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20215673-20215673--RUN147-Alfa_Romeo_147_1.png,MAR655,mt,1
-train/20230460-20230460--HCC722-Honda_Fit_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20230460-20230460--HCC722-Honda_Fit_0.png,HCC722,mt,1
+train/20230460-20230460--HCC722-Honda_Fit_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20230460-20230460--HCC722-Honda_Fit_0.png,HCC772,mt,1
 train/20230481-20230481--LGM002-Land_Rover_Defender_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20230481-20230481--LGM002-Land_Rover_Defender_0.png,LGM002,mt,1
 train/20230485-20230485--AND300-Land_Rover_Defender_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20230485-20230485--AND300-Land_Rover_Defender_0.png,AND300,mt,1
 train/20234547-20234547--HMY185-Toyota_Coaster_0.png,autoriaNumberplateOcrEu-2023-06-26/train/img/20234547-20234547--HMY185-Toyota_Coaster_0.png,HMY185,mt,1
