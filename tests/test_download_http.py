@@ -12,7 +12,7 @@ import zipfile
 import pytest
 
 from alpr import download as dl
-from alpr.download import Archive, RemoteFile, _target, download, fetch_member, file_hash, range_get
+from alpr.download import Archive, RemoteFile, _target, download, fetch_member, fetch_release, file_hash, range_get
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -289,3 +289,31 @@ def test_cached_md5_przelicza_po_zmianie_pliku(tmp_path):
     os.utime(tmp_path / "a.bin.md5", (old - 10, old - 10))
     assert dl.cached_md5(path) == hashlib.md5(b"abc").hexdigest()
     assert (tmp_path / "a.bin.md5").read_text() == hashlib.md5(b"abc").hexdigest()
+
+
+def _release(files: dict[str, bytes]) -> None:
+    sums = "".join(f"{hashlib.sha256(d).hexdigest()}  {n}\n" for n, d in files.items())
+    Handler.files = {f"/wyd/{n}": d for n, d in files.items()} | {"/wyd/SHA256SUMS": sums.encode()}
+
+
+def test_fetch_release_pobiera_i_sprawdza(server, tmp_path):
+    _release({"a.pt": b"wagi a", "b.pt": b"wagi b"})
+    assert fetch_release(f"{server}/wyd", tmp_path) == []
+    assert (tmp_path / "a.pt").read_bytes() == b"wagi a"
+    assert (tmp_path / "b.pt").read_bytes() == b"wagi b"
+
+
+def test_fetch_release_pomija_poprawne_i_podmienia_zle(server, tmp_path):
+    _release({"a.pt": b"wagi a", "b.pt": b"wagi b"})
+    (tmp_path / "a.pt").write_bytes(b"wagi a")
+    (tmp_path / "b.pt").write_bytes(b"stare")
+    Handler.log.clear()
+    assert fetch_release(f"{server}/wyd", tmp_path) == []
+    assert (tmp_path / "b.pt").read_bytes() == b"wagi b"
+    assert not any(path == "/wyd/a.pt" for _, path, _ in Handler.log)
+
+
+def test_fetch_release_zwraca_zla_sume(server, tmp_path):
+    _release({"a.pt": b"wagi a"})
+    Handler.files["/wyd/a.pt"] = b"uszkodzone"
+    assert fetch_release(f"{server}/wyd", tmp_path) == ["a.pt"]

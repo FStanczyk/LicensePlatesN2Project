@@ -132,6 +132,20 @@ Decyzje: `process_documentation/hubert.md`, wszystkie pomiary: `results/benchmar
   `SBE674C` -> `SBE5754C` (to samo auto co `data1_253` w train, więc po poprawce oba zdjęcia są w test),
   `data3_00244` `O2KP10` -> `02KP10`, `data3_04171` `HCC722` -> `HCC772`. Zbiór na Kaggle wymaga nowej wersji.
 
+**21.11.2026 (Golba)**: odtworzenie wyników Włodarczyka na drugim komputerze (RTX 4080, Windows). Zbiór przebudowany
+z poprawionymi etykietami, YOLO `plates_ref` (val mAP50 0.977, mAP50-95 0.799), CRNN, PARSeq i PARSeq po
+dekonwolucji przetrenowane według przepisów z sekcji "OCR" (ziarno 0). Odczyt bezbłędny na `test` (40 tablic):
+
+| Układ | Czyste | Zniekształcone | Rozmycie ostrości | Rozmycie ruchu |
+|---|---|---|---|---|
+| EasyOCR strojony (`results/experiment/v3_easyocr/`) | 0.625 | 0.278 | 0.080 | 0.065 |
+| CRNN, wycinek z ramki (`v3_crnn/`) | 0.975 | 0.815 | 0.585 | 0.775 |
+| PARSeq + dekonwolucja, pewniejszy z dwóch (`v3_parseq_deblur/`) | 1.000 | 0.912 | 0.740 | 0.940 |
+
+* Wynik PARSeq zgodny z przebiegiem Włodarczyka dla ziarna 0 (0.916) w granicach jednej-dwóch tablic.
+* `build_experiment.py --workers` i `run_experiment.py --deblur` używały metody `forkserver`, której nie ma na
+  Windows; teraz `alpr.config.MP_START` wybiera `spawn`, gdy `forkserver` nie istnieje.
+
 ---
 
 ## Możliwe eksperymenty
@@ -276,6 +290,44 @@ kaggle datasets version -p data/combined -m "opis zmian" -r zip   # nowa wersja 
   więc oba trafiają teraz do `test`), `data/data3/labels.csv`: `O2KP10` -> `02KP10`, `HCC722` -> `HCC772`.
   Liczba wierszy `plates.csv` bez zmian (16584), zmieniają się 3 numery i podział 2 wierszy (`data1_253`).
   Golden testy przechodzą (sprawdzają kod na danych syntetycznych); zbiór na Kaggle wymaga nowej wersji.
+
+---
+
+## Gotowe modele
+
+Wytrenowane wagi są w wydaniach GitHub (nie w gicie). Zamiast trenować od nowa:
+
+```bash
+python3 scripts/get_models.py                      # runs/modele/modele-2026-11-21/, sprawdza SHA256
+```
+
+| Plik | Co to jest | Przepis | Wynik |
+|---|---|---|---|
+| `yolo11n_plates.pt` | detektor tablic YOLO11n, 640 px | `train_yolo.py --device 0 --name plates_ref` | val P 0.968, R 0.955, mAP50 0.977, mAP50-95 0.799 |
+| `crnn.pt` | CRNN od zera (CTC) | `train_ocr.py --model crnn --jitter 4 --detector <yolo> --blur 0.3 --extra data/experiment_tune` | val plate_acc 0.943 |
+| `parseq_s0.pt` | PARSeq dotrenowany na tablicach | `train_ocr.py --model parseq --detector <yolo> --extra data/experiment_tune` | walidacja 0.972 |
+| `parseq_dec_s0.pt` | PARSeq dotrenowany dalej na wycinkach po dekonwolucji | `train_ocr.py --model parseq --init parseq_s0.pt --deconv ...` (sekcja "OCR") | walidacja 0.955 |
+
+Uczone 21.11.2026 (Golba, RTX 4080) na zbiorze z poprawionymi etykietami, ziarno 0. Starsze wydanie
+`modele-2026-11-16` (Włodarczyk, ten sam przepis, bez CRNN): `get_models.py --tag modele-2026-11-16`.
+PARSeq wymaga `pip install -e ".[parseq]"`. Zbiór eksperymentu: `build_experiment.py` (sekcja "Eksperyment").
+
+```bash
+M=runs/modele/modele-2026-11-21
+python3 scripts/run_experiment.py --weights $M/yolo11n_plates.pt --batch 8 --no-align --deblur \
+    --engine parseq --ocr-weights $M/parseq_s0.pt $M/parseq_dec_s0.pt --name parseq_deblur
+python3 scripts/run_experiment.py --weights $M/yolo11n_plates.pt --batch 8 --no-align \
+    --engine crnn --ocr-weights $M/crnn.pt --name crnn
+python3 scripts/detect_plates.py --weights $M/yolo11n_plates.pt --split test
+python3 scripts/ocr_plates.py --detections results/detections/test/detections.csv --engine parseq \
+    --param weights=$M/parseq_s0.pt
+```
+
+Wynik na `test` eksperymentu (40 tablic x 21 wersji): PARSeq z dekonwolucją czyste 1.000, zniekształcone 0.912;
+CRNN 0.975 i 0.815 (`results/experiment/v3_*`).
+
+Nowe wydanie (wymaga `gh` i uprawnień do repozytorium): pliki do jednego katalogu, `sha256sum` w formacie
+`<suma>  <plik>` do `SHA256SUMS`, `gh release create <tag> <pliki>`, potem `MODELS_TAG` w `alpr/config.py`.
 
 ---
 

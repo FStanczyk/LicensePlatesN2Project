@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
+from alpr.config import MP_START
 from alpr.dataset import load_plates
 from alpr.detection.metrics import BOX, desc_order, greedy_match
 from alpr.geometry import box_iou_matrix
@@ -117,7 +118,7 @@ def build_experiment(
     items = [(image, plates.to_dict("records")) for image, plates in gt.groupby("image")]
     build = partial(build_image, dataset=dataset, out=out, corruptions=corruptions)
     rows = []
-    with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("forkserver")) as pool:
+    with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context(MP_START)) as pool:
         for i, part in enumerate(pool.map(build, items) if workers > 1 else map(build, items), 1):
             rows += part
             if i % 20 == 0:

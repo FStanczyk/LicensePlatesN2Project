@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from alpr.config import SEED
+from alpr.config import MP_START, SEED
 
 DISK = [(3, 0.1), (4, 0.5), (6, 0.5), (8, 0.5), (10, 0.5)]
 MOTION = [(10, 3), (15, 5), (15, 8), (15, 12), (20, 15)]
@@ -234,5 +234,5 @@ def estimate_blur_files(paths: list[Path], workers: int = 8) -> list[BlurEstimat
     """estimate_blur dla wielu zdjęć w osobnych procesach (CPU, ok. 0,1 s na zdjęcie)."""
     if workers <= 1:
         return [_estimate_file(str(p)) for p in paths]
-    with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("forkserver")) as pool:
+    with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context(MP_START)) as pool:
         return list(pool.map(_estimate_file, [str(p) for p in paths], chunksize=4))

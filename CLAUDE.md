@@ -25,6 +25,7 @@ Potok docelowy: folder zdjęć -> przetwarzanie -> detekcja i wyrównanie -> OCR
   `detection/` (`PlateDetector`, `PlateAligner`, `training`, `pipeline`, `metrics`).
 * `scripts/`: cienkie CLI wywołujące `alpr`:
   * `get_data.py`: pobiera gotowy zbiór z Kaggle do `data/combined/`. **Zwykle wystarczy tylko to.**
+  * `get_models.py`: pobiera wytrenowane wagi (YOLO, CRNN, PARSeq) z wydania GitHub do `runs/modele/` (README, sekcja "Gotowe modele").
   * `download_data.py`, `build_dataset.py`: tylko do przebudowy zbioru (źródła w `data/data1..3/photos/`).
   * `train_yolo.py`, `eval_detection.py`, `eval_alignment.py`, `detect_plates.py`: detekcja
     (opis w README, sekcja "Detekcja tablic").

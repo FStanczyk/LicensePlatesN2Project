@@ -117,6 +117,20 @@ def verify_sums(sums_file: Path, folder: Path) -> list[str]:
         return [name for (_, name), wrong in zip(entries, pool.map(bad, entries), strict=True) if wrong]
 
 
+def fetch_release(url: str, dest: Path) -> list[str]:
+    """Pliki wydania z url (SHA256SUMS i wymienione w nim) do dest; pobiera tylko brakujące lub zmienione.
+
+    Zwraca pliki, których suma nadal się nie zgadza.
+    """
+    sums = dest / "SHA256SUMS"
+    sums.unlink(missing_ok=True)
+    download(f"{url}/SHA256SUMS", sums)
+    for name in verify_sums(sums, dest):
+        (dest / name).unlink(missing_ok=True)
+        download(f"{url}/{name}", dest / name)
+    return verify_sums(sums, dest)
+
+
 def _target(name: str, members: dict[str, str]) -> str | None:
     for src, dst in members.items():
         if name == src:
