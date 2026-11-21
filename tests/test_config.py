@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 
 import yaml
 
@@ -49,3 +50,7 @@ def test_szablon_metadane_kaggle():
     meta = json.loads((TEMPLATE / "dataset-metadata.json").read_text())
     assert meta["id"] == config.KAGGLE_DATASET
     assert (TEMPLATE / "README.md").exists()
+
+
+def test_mp_start_dostepny():
+    assert config.MP_START in multiprocessing.get_all_start_methods()
