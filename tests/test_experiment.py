@@ -234,3 +234,18 @@ def test_images_by_source_wersje_obok_siebie():
         }
     )
     assert images_by_source(gt) == ["images/a_1/x.jpg", "images/clean/x.jpg", "images/a_1/y.jpg", "images/clean/y.jpg"]
+
+
+def test_variants_10_poziomow_rozmycia():
+    names = [v for v, _, _ in variants(("motion_blur",), 10)]
+    assert names == ["clean"] + [f"motion_blur_{s:02d}" for s in range(1, 11)]
+    with pytest.raises(ValueError):
+        variants(("darken",), 10)
+
+
+def test_build_experiment_10_poziomow(dataset, tmp_path):
+    pytest.importorskip("imagecorruptions", reason='wymaga extras [build]: pip install -e ".[build]"')
+    out = tmp_path / "exp"
+    gt = build_experiment(dataset, out, ("test",), ("defocus_blur",), levels=10)
+    assert sorted(gt.artificial_severity) == list(range(11))
+    assert all((out / f"images/defocus_blur_{s:02d}/d0.jpg").exists() for s in range(1, 11))

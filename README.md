@@ -146,6 +146,48 @@ dekonwolucji przetrenowane według przepisów z sekcji "OCR" (ziarno 0). Odczyt 
 * `build_experiment.py --workers` i `run_experiment.py --deblur` używały metody `forkserver`, której nie ma na
   Windows; teraz `alpr.config.MP_START` wybiera `spawn`, gdy `forkserver` nie istnieje.
 
+**21.11.2026 (Golba), duży eksperyment**: 10 poziomów rozmycia ruchu i ostrości (bez `brightness` i `darken`), 5 silników
+OCR, bez poprawy obrazu. 40 tablic `test` x 21 wersji; pełne tabele (też CAR): `results/experiment/blur10/PODSUMOWANIE.md`.
+Odczyt bezbłędny, wybrane poziomy (2k = siła k z `imagecorruptions`):
+
+| Silnik | Czyste | Ruch 2 / 6 / 10 | Ostrość 2 / 6 / 10 |
+|---|---|---|---|
+| EasyOCR strojony | 0.625 | 0.200 / 0.000 / 0.000 | 0.225 / 0.000 / 0.000 |
+| Tesseract (Otsu) | 0.375 | 0.100 / 0.000 / 0.000 | 0.100 / 0.025 / 0.000 |
+| LPRNet | 0.975 | 0.875 / 0.375 / 0.000 | 0.750 / 0.325 / 0.000 |
+| CRNN | 0.975 | 0.950 / 0.825 / 0.500 | 0.875 / 0.625 / 0.175 |
+| PARSeq | 1.000 | 0.975 / 0.925 / 0.675 | 0.975 / 0.700 / 0.300 |
+
+* Detekcja wykrywa 97.5-100% tablic na każdym poziomie; cały spadek to OCR.
+* EasyOCR i Tesseract od poziomu 6 nie odczytują bezbłędnie żadnej tablicy; CRNN i PARSeq trzymają ponad 80% do
+  poziomu 5-6 ruchu. Rozmycie ostrości jest trudniejsze niż ruch na tym samym poziomie.
+* CAR spada łagodniej niż odczyt bezbłędny (PARSeq, ostrość 10: CAR 0.599, odczyt bezbłędny 0.300), więc jest co
+  odzyskiwać poprawą obrazu.
+
+**21.11.2026 (Golba), pełny eksperyment**: te same 10 poziomów i 5 silników z poprawą odczytu Włodarczyka
+(dekonwolucja `--deblur`; dla PARSeq także drugi model po dekonwolucji). Pełne tabele:
+`results/experiment/blur10/PODSUMOWANIE_POPRAWA.md`. Odczyt bezbłędny, średnio na poziomach 1-10, bez / z poprawą:
+
+| Silnik | Rozmycie ruchu | Rozmycie ostrości |
+|---|---|---|
+| EasyOCR strojony | 0.085 / 0.258 | 0.122 / 0.125 |
+| Tesseract (Otsu) | 0.042 / 0.028 | 0.065 / 0.050 |
+| LPRNet | 0.418 / 0.678 | 0.420 / 0.465 |
+| CRNN | 0.795 / 0.830 | 0.622 / 0.640 |
+| PARSeq | 0.865 / 0.930 | 0.690 / 0.740 |
+| PARSeq + drugi model po dekonwolucji | 0.865 / 0.935 | 0.690 / 0.757 |
+
+* Dekonwolucja odzyskuje głównie rozmycie ruchu (LPRNet na poziomach 7-10 z 0-5% do 50-53%); przy rozmyciu
+  ostrości od poziomu 7 najlepszy układ zostaje poniżej 65%.
+* Tesseract na tym traci: z listą znaków zgłasza pewność 0, więc wybór widoku po pewności nie działa.
+
+**21.11.2026 (Golba), podsumowanie końcowe**: `results/experiment/blur10/PODSUMOWANIE_FINAL.md` (zbiór, detekcja,
+silniki OCR i ich trening, 10 poziomów rozmycia, wyniki dla 3 ziaren treningu sieci z pewnością odczytu, wnioski i
+TODO), liczby w `tabela_final.csv`. Średnio po 3 ziarnach, bez / z poprawą: LPRNet 0.421 / 0.696 (ruch) i
+0.416 / 0.460 (ostrość), CRNN 0.815 / 0.853 i 0.637 / 0.659, PARSeq 0.867 / 0.931 i 0.691 / 0.743, PARSeq x2
+0.933 i 0.756. Rozrzut między ziarnami do 5.6 p.p. w średniej. Sieci są uczone na naszych danych i tym samym
+generatorze rozmycia, więc wynik to górna granica dla tego układu.
+
 ---
 
 ## Możliwe eksperymenty
@@ -501,6 +543,14 @@ python3 scripts/run_experiment.py --weights runs/detect/plates/weights/best.pt
 Do strojenia i wyboru epok służy osobny zbiór z `train` i `val`, żeby nie dopasowywać ustawień do `test`:
 `build_experiment.py --splits train val --out data/experiment_tune`, a z niego same tablice z `val` jako
 `data/experiment_val` (ten sam `ground_truth.csv` przefiltrowany po `split`).
+
+10 poziomów rozmycia (tylko `motion_blur` i `defocus_blur`, `alpr.build.corruptions.BLUR_LEVELS`; poziom 2k to siła k
+z `imagecorruptions`, nieparzyste leżą między sąsiednimi siłami):
+
+```bash
+python3 scripts/build_experiment.py --levels 10 --out data/experiment_blur10
+python3 scripts/run_experiment.py --experiment data/experiment_blur10 --weights runs/detect/plates_ref/weights/best.pt     --batch 8 --no-align --engine parseq --ocr-weights runs/ocr/parseq_s0/best.pt --name blur10_parseq
+```
 
 Najlepszy układ (wynik w sekcji "Stan prac", 15-16.11.2026), ok. 1 min na 840 zdjęć:
 

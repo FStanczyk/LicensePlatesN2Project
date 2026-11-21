@@ -1,0 +1,526 @@
+engine,method,seed,artificial_corruption,artificial_severity,plates,detected,text_ok,car,conf,conf_ok,conf_err
+EasyOCR,brak,-,none,0,40,1.0,0.625,0.9228,0.7525,0.8917,0.5206
+EasyOCR,brak,-,motion_blur,1,40,1.0,0.4,0.8085,0.5885,0.8987,0.3817
+EasyOCR,brak,-,motion_blur,2,40,1.0,0.2,0.6344,0.4283,0.8078,0.3335
+EasyOCR,brak,-,motion_blur,3,40,1.0,0.125,0.5112,0.3139,0.7107,0.2573
+EasyOCR,brak,-,motion_blur,4,40,1.0,0.025,0.3393,0.2482,0.6282,0.2384
+EasyOCR,brak,-,motion_blur,5,40,1.0,0.1,0.2558,0.1965,0.8511,0.1238
+EasyOCR,brak,-,motion_blur,6,40,1.0,0.0,0.1536,0.0944,,0.0944
+EasyOCR,brak,-,motion_blur,7,40,1.0,0.0,0.0768,0.0569,,0.0569
+EasyOCR,brak,-,motion_blur,8,40,0.975,0.0,0.0375,0.0301,,0.0301
+EasyOCR,brak,-,motion_blur,9,40,1.0,0.0,0.0174,0.0141,,0.0141
+EasyOCR,brak,-,motion_blur,10,40,1.0,0.0,0.0036,0.045,,0.045
+EasyOCR,brak,-,defocus_blur,1,40,1.0,0.475,0.7446,0.6017,0.8794,0.3505
+EasyOCR,brak,-,defocus_blur,2,40,1.0,0.225,0.5348,0.4064,0.8923,0.2653
+EasyOCR,brak,-,defocus_blur,3,40,1.0,0.275,0.4951,0.4077,0.9225,0.2124
+EasyOCR,brak,-,defocus_blur,4,40,1.0,0.175,0.3754,0.2931,0.9119,0.1618
+EasyOCR,brak,-,defocus_blur,5,40,1.0,0.075,0.2299,0.1465,0.7577,0.097
+EasyOCR,brak,-,defocus_blur,6,40,1.0,0.0,0.1393,0.1028,,0.1028
+EasyOCR,brak,-,defocus_blur,7,40,1.0,0.0,0.0571,0.0489,,0.0489
+EasyOCR,brak,-,defocus_blur,8,40,1.0,0.0,0.0,0.0235,,0.0235
+EasyOCR,brak,-,defocus_blur,9,40,1.0,0.0,0.0036,0.0003,,0.0003
+EasyOCR,brak,-,defocus_blur,10,40,1.0,0.0,0.0071,0.0008,,0.0008
+EasyOCR,dekonwolucja,-,none,0,40,1.0,0.65,0.9054,0.8714,0.9415,0.7414
+EasyOCR,dekonwolucja,-,motion_blur,1,40,1.0,0.5,0.7853,0.8034,0.9347,0.6722
+EasyOCR,dekonwolucja,-,motion_blur,2,40,1.0,0.5,0.7723,0.7608,0.9438,0.5778
+EasyOCR,dekonwolucja,-,motion_blur,3,40,1.0,0.375,0.7004,0.6855,0.953,0.5251
+EasyOCR,dekonwolucja,-,motion_blur,4,40,1.0,0.35,0.6848,0.6736,0.9375,0.5316
+EasyOCR,dekonwolucja,-,motion_blur,5,40,1.0,0.275,0.5647,0.6053,0.9116,0.4891
+EasyOCR,dekonwolucja,-,motion_blur,6,40,1.0,0.25,0.5071,0.5304,0.8958,0.4086
+EasyOCR,dekonwolucja,-,motion_blur,7,40,1.0,0.125,0.4116,0.4853,0.9562,0.418
+EasyOCR,dekonwolucja,-,motion_blur,8,40,0.975,0.075,0.3598,0.4367,0.8916,0.3988
+EasyOCR,dekonwolucja,-,motion_blur,9,40,1.0,0.05,0.3357,0.3539,0.6992,0.3357
+EasyOCR,dekonwolucja,-,motion_blur,10,40,1.0,0.075,0.296,0.2795,0.9049,0.2288
+EasyOCR,dekonwolucja,-,defocus_blur,1,40,1.0,0.475,0.6884,0.6964,0.9278,0.487
+EasyOCR,dekonwolucja,-,defocus_blur,2,40,1.0,0.225,0.5339,0.5767,0.9373,0.472
+EasyOCR,dekonwolucja,-,defocus_blur,3,40,1.0,0.275,0.5058,0.5438,0.9808,0.378
+EasyOCR,dekonwolucja,-,defocus_blur,4,40,1.0,0.175,0.3696,0.5227,0.9659,0.4286
+EasyOCR,dekonwolucja,-,defocus_blur,5,40,1.0,0.075,0.2388,0.3517,0.9486,0.3033
+EasyOCR,dekonwolucja,-,defocus_blur,6,40,1.0,0.025,0.2103,0.2848,0.9925,0.2667
+EasyOCR,dekonwolucja,-,defocus_blur,7,40,1.0,0.0,0.0906,0.1909,,0.1909
+EasyOCR,dekonwolucja,-,defocus_blur,8,40,1.0,0.0,0.0415,0.1354,,0.1354
+EasyOCR,dekonwolucja,-,defocus_blur,9,40,1.0,0.0,0.0473,0.1235,,0.1235
+EasyOCR,dekonwolucja,-,defocus_blur,10,40,1.0,0.0,0.0558,0.0894,,0.0894
+Tesseract,brak,-,none,0,40,1.0,0.375,0.6603,0.0065,0.0007,0.01
+Tesseract,brak,-,motion_blur,1,40,1.0,0.225,0.6821,0.0148,0.0,0.019
+Tesseract,brak,-,motion_blur,2,40,1.0,0.1,0.6013,0.0145,0.0,0.0161
+Tesseract,brak,-,motion_blur,3,40,1.0,0.1,0.4996,0.0312,0.0,0.0347
+Tesseract,brak,-,motion_blur,4,40,1.0,0.0,0.3344,0.0238,,0.0238
+Tesseract,brak,-,motion_blur,5,40,1.0,0.0,0.267,0.0192,,0.0192
+Tesseract,brak,-,motion_blur,6,40,1.0,0.0,0.167,0.042,,0.042
+Tesseract,brak,-,motion_blur,7,40,1.0,0.0,0.0692,0.0403,,0.0403
+Tesseract,brak,-,motion_blur,8,40,0.975,0.0,0.0442,0.0555,,0.0555
+Tesseract,brak,-,motion_blur,9,40,1.0,0.0,0.0335,0.0305,,0.0305
+Tesseract,brak,-,motion_blur,10,40,1.0,0.0,0.0277,0.0234,,0.0234
+Tesseract,brak,-,defocus_blur,1,40,1.0,0.225,0.6295,0.0212,0.0,0.0274
+Tesseract,brak,-,defocus_blur,2,40,1.0,0.1,0.4286,0.048,0.0,0.0533
+Tesseract,brak,-,defocus_blur,3,40,1.0,0.125,0.4415,0.0273,0.0,0.0311
+Tesseract,brak,-,defocus_blur,4,40,1.0,0.1,0.3415,0.0042,0.0,0.0047
+Tesseract,brak,-,defocus_blur,5,40,1.0,0.025,0.1933,0.0244,0.0,0.025
+Tesseract,brak,-,defocus_blur,6,40,1.0,0.025,0.1661,0.0242,0.0,0.0249
+Tesseract,brak,-,defocus_blur,7,40,1.0,0.05,0.0938,0.0192,0.0,0.0203
+Tesseract,brak,-,defocus_blur,8,40,1.0,0.0,0.021,0.0211,,0.0211
+Tesseract,brak,-,defocus_blur,9,40,1.0,0.0,0.0237,0.015,,0.015
+Tesseract,brak,-,defocus_blur,10,40,1.0,0.0,0.0067,0.0348,,0.0348
+Tesseract,dekonwolucja,-,none,0,40,1.0,0.225,0.5304,0.1842,0.1444,0.1958
+Tesseract,dekonwolucja,-,motion_blur,1,40,1.0,0.15,0.5379,0.1489,0.1183,0.1543
+Tesseract,dekonwolucja,-,motion_blur,2,40,1.0,0.05,0.4857,0.1822,0.075,0.1879
+Tesseract,dekonwolucja,-,motion_blur,3,40,1.0,0.075,0.4357,0.2094,0.0,0.2264
+Tesseract,dekonwolucja,-,motion_blur,4,40,1.0,0.0,0.3107,0.2014,,0.2014
+Tesseract,dekonwolucja,-,motion_blur,5,40,1.0,0.0,0.2179,0.1906,,0.1906
+Tesseract,dekonwolucja,-,motion_blur,6,40,1.0,0.0,0.1844,0.2096,,0.2096
+Tesseract,dekonwolucja,-,motion_blur,7,40,1.0,0.0,0.1442,0.265,,0.265
+Tesseract,dekonwolucja,-,motion_blur,8,40,0.975,0.0,0.1063,0.2637,,0.2637
+Tesseract,dekonwolucja,-,motion_blur,9,40,1.0,0.0,0.0652,0.2556,,0.2556
+Tesseract,dekonwolucja,-,motion_blur,10,40,1.0,0.0,0.0754,0.2059,,0.2059
+Tesseract,dekonwolucja,-,defocus_blur,1,40,1.0,0.15,0.433,0.2138,0.0,0.2515
+Tesseract,dekonwolucja,-,defocus_blur,2,40,1.0,0.075,0.3996,0.1646,0.0,0.178
+Tesseract,dekonwolucja,-,defocus_blur,3,40,1.0,0.1,0.3955,0.2295,0.1275,0.2408
+Tesseract,dekonwolucja,-,defocus_blur,4,40,1.0,0.075,0.2772,0.2698,0.0,0.2916
+Tesseract,dekonwolucja,-,defocus_blur,5,40,1.0,0.025,0.1821,0.2716,0.0,0.2786
+Tesseract,dekonwolucja,-,defocus_blur,6,40,1.0,0.025,0.158,0.2536,0.0,0.2601
+Tesseract,dekonwolucja,-,defocus_blur,7,40,1.0,0.05,0.0732,0.2342,0.0,0.2466
+Tesseract,dekonwolucja,-,defocus_blur,8,40,1.0,0.0,0.0491,0.1768,,0.1768
+Tesseract,dekonwolucja,-,defocus_blur,9,40,1.0,0.0,0.0268,0.1892,,0.1892
+Tesseract,dekonwolucja,-,defocus_blur,10,40,1.0,0.0,0.0304,0.1891,,0.1891
+LPRNet,brak,0,none,0,40,1.0,0.975,0.9929,0.9744,0.9789,0.7965
+LPRNet,brak,0,motion_blur,1,40,1.0,0.975,0.9893,0.9746,0.9765,0.9021
+LPRNet,brak,0,motion_blur,2,40,1.0,0.875,0.9759,0.9641,0.977,0.8739
+LPRNet,brak,0,motion_blur,3,40,1.0,0.75,0.9393,0.9416,0.9789,0.8295
+LPRNet,brak,0,motion_blur,4,40,1.0,0.55,0.8737,0.8904,0.9789,0.7822
+LPRNet,brak,0,motion_blur,5,40,1.0,0.525,0.8183,0.8601,0.9641,0.745
+LPRNet,brak,0,motion_blur,6,40,1.0,0.375,0.7071,0.7989,0.9406,0.7139
+LPRNet,brak,0,motion_blur,7,40,1.0,0.05,0.6121,0.7343,0.8946,0.7259
+LPRNet,brak,0,motion_blur,8,40,0.975,0.025,0.4469,0.7102,0.814,0.7075
+LPRNet,brak,0,motion_blur,9,40,1.0,0.05,0.4964,0.6381,0.8882,0.6249
+LPRNet,brak,0,motion_blur,10,40,1.0,0.0,0.396,0.6211,,0.6211
+LPRNet,brak,0,defocus_blur,1,40,1.0,0.925,0.9826,0.9726,0.979,0.8932
+LPRNet,brak,0,defocus_blur,2,40,1.0,0.75,0.8732,0.911,0.9851,0.6886
+LPRNet,brak,0,defocus_blur,3,40,1.0,0.75,0.8174,0.8651,0.9806,0.5186
+LPRNet,brak,0,defocus_blur,4,40,1.0,0.65,0.7496,0.8078,0.9638,0.518
+LPRNet,brak,0,defocus_blur,5,40,1.0,0.4,0.6174,0.7192,0.9741,0.5493
+LPRNet,brak,0,defocus_blur,6,40,1.0,0.325,0.508,0.6489,0.9682,0.4952
+LPRNet,brak,0,defocus_blur,7,40,1.0,0.275,0.4728,0.6197,0.9559,0.4922
+LPRNet,brak,0,defocus_blur,8,40,1.0,0.1,0.3576,0.5377,0.9368,0.4933
+LPRNet,brak,0,defocus_blur,9,40,1.0,0.025,0.2795,0.4454,0.858,0.4348
+LPRNet,brak,0,defocus_blur,10,40,1.0,0.0,0.2045,0.4165,,0.4165
+LPRNet,brak,1,none,0,40,1.0,0.975,0.9929,0.974,0.9763,0.8861
+LPRNet,brak,1,motion_blur,1,40,1.0,0.925,0.983,0.9722,0.976,0.925
+LPRNet,brak,1,motion_blur,2,40,1.0,0.9,0.9799,0.9581,0.9689,0.861
+LPRNet,brak,1,motion_blur,3,40,1.0,0.75,0.9393,0.928,0.9671,0.8109
+LPRNet,brak,1,motion_blur,4,40,1.0,0.65,0.8634,0.8885,0.9654,0.7457
+LPRNet,brak,1,motion_blur,5,40,1.0,0.55,0.8335,0.8259,0.9637,0.6575
+LPRNet,brak,1,motion_blur,6,40,1.0,0.35,0.6862,0.7667,0.9412,0.6728
+LPRNet,brak,1,motion_blur,7,40,1.0,0.125,0.5799,0.6726,0.9167,0.6378
+LPRNet,brak,1,motion_blur,8,40,0.975,0.05,0.4603,0.6466,0.8535,0.6355
+LPRNet,brak,1,motion_blur,9,40,1.0,0.025,0.4397,0.6094,0.7245,0.6064
+LPRNet,brak,1,motion_blur,10,40,1.0,0.025,0.3857,0.5647,0.768,0.5595
+LPRNet,brak,1,defocus_blur,1,40,1.0,0.925,0.9826,0.968,0.976,0.8691
+LPRNet,brak,1,defocus_blur,2,40,1.0,0.75,0.9036,0.8848,0.9654,0.6431
+LPRNet,brak,1,defocus_blur,3,40,1.0,0.75,0.8174,0.8456,0.9722,0.466
+LPRNet,brak,1,defocus_blur,4,40,1.0,0.625,0.7469,0.8045,0.9718,0.5256
+LPRNet,brak,1,defocus_blur,5,40,1.0,0.375,0.5719,0.6425,0.977,0.4418
+LPRNet,brak,1,defocus_blur,6,40,1.0,0.325,0.4929,0.5851,0.9595,0.4048
+LPRNet,brak,1,defocus_blur,7,40,1.0,0.2,0.4241,0.5257,0.9482,0.4201
+LPRNet,brak,1,defocus_blur,8,40,1.0,0.1,0.2969,0.4742,0.9475,0.4216
+LPRNet,brak,1,defocus_blur,9,40,1.0,0.025,0.229,0.377,0.947,0.3624
+LPRNet,brak,1,defocus_blur,10,40,1.0,0.025,0.2036,0.3487,0.6796,0.3402
+LPRNet,brak,2,none,0,40,1.0,0.975,0.9929,0.9762,0.9808,0.7968
+LPRNet,brak,2,motion_blur,1,40,1.0,0.925,0.9795,0.9723,0.9765,0.921
+LPRNet,brak,2,motion_blur,2,40,1.0,0.875,0.9759,0.9677,0.979,0.889
+LPRNet,brak,2,motion_blur,3,40,1.0,0.7,0.9237,0.9331,0.9782,0.828
+LPRNet,brak,2,motion_blur,4,40,1.0,0.65,0.8768,0.8767,0.9571,0.7275
+LPRNet,brak,2,motion_blur,5,40,1.0,0.55,0.8433,0.8469,0.952,0.7184
+LPRNet,brak,2,motion_blur,6,40,1.0,0.25,0.6848,0.7676,0.958,0.7041
+LPRNet,brak,2,motion_blur,7,40,1.0,0.125,0.5991,0.7074,0.8249,0.6906
+LPRNet,brak,2,motion_blur,8,40,0.975,0.025,0.4705,0.6477,0.8555,0.6422
+LPRNet,brak,2,motion_blur,9,40,1.0,0.0,0.4817,0.632,,0.632
+LPRNet,brak,2,motion_blur,10,40,1.0,0.0,0.396,0.5837,,0.5837
+LPRNet,brak,2,defocus_blur,1,40,1.0,0.925,0.9826,0.9667,0.9704,0.921
+LPRNet,brak,2,defocus_blur,2,40,1.0,0.75,0.8804,0.8957,0.9779,0.6491
+LPRNet,brak,2,defocus_blur,3,40,1.0,0.725,0.8277,0.8596,0.9813,0.539
+LPRNet,brak,2,defocus_blur,4,40,1.0,0.65,0.7643,0.8107,0.9649,0.5244
+LPRNet,brak,2,defocus_blur,5,40,1.0,0.425,0.6263,0.7102,0.9725,0.5163
+LPRNet,brak,2,defocus_blur,6,40,1.0,0.325,0.5188,0.6515,0.9533,0.5062
+LPRNet,brak,2,defocus_blur,7,40,1.0,0.2,0.4522,0.5821,0.9659,0.4862
+LPRNet,brak,2,defocus_blur,8,40,1.0,0.15,0.3884,0.4994,0.9106,0.4268
+LPRNet,brak,2,defocus_blur,9,40,1.0,0.025,0.2826,0.4244,0.8649,0.4131
+LPRNet,brak,2,defocus_blur,10,40,1.0,0.0,0.1933,0.4232,,0.4232
+LPRNet,dekonwolucja,0,none,0,40,1.0,0.975,0.9857,0.977,0.9789,0.9028
+LPRNet,dekonwolucja,0,motion_blur,1,40,1.0,0.975,0.9893,0.9746,0.9765,0.9021
+LPRNet,dekonwolucja,0,motion_blur,2,40,1.0,0.9,0.979,0.9695,0.9802,0.8733
+LPRNet,dekonwolucja,0,motion_blur,3,40,1.0,0.825,0.9634,0.966,0.9784,0.9075
+LPRNet,dekonwolucja,0,motion_blur,4,40,1.0,0.725,0.95,0.9621,0.9763,0.9247
+LPRNet,dekonwolucja,0,motion_blur,5,40,1.0,0.625,0.9143,0.9564,0.9706,0.9329
+LPRNet,dekonwolucja,0,motion_blur,6,40,1.0,0.65,0.8857,0.9493,0.9761,0.8995
+LPRNet,dekonwolucja,0,motion_blur,7,40,1.0,0.525,0.8366,0.9337,0.9881,0.8737
+LPRNet,dekonwolucja,0,motion_blur,8,40,0.975,0.525,0.7402,0.94,0.9861,0.8862
+LPRNet,dekonwolucja,0,motion_blur,9,40,1.0,0.525,0.8246,0.8998,0.9781,0.8132
+LPRNet,dekonwolucja,0,motion_blur,10,40,1.0,0.5,0.7121,0.906,0.983,0.829
+LPRNet,dekonwolucja,0,defocus_blur,1,40,1.0,0.925,0.9826,0.9752,0.979,0.9278
+LPRNet,dekonwolucja,0,defocus_blur,2,40,1.0,0.775,0.8938,0.9425,0.9843,0.7983
+LPRNet,dekonwolucja,0,defocus_blur,3,40,1.0,0.75,0.8607,0.938,0.9806,0.8102
+LPRNet,dekonwolucja,0,defocus_blur,4,40,1.0,0.675,0.7996,0.905,0.9753,0.7592
+LPRNet,dekonwolucja,0,defocus_blur,5,40,1.0,0.4,0.5938,0.849,0.9741,0.7656
+LPRNet,dekonwolucja,0,defocus_blur,6,40,1.0,0.4,0.5964,0.8114,0.9692,0.7063
+LPRNet,dekonwolucja,0,defocus_blur,7,40,1.0,0.3,0.5705,0.7864,0.9557,0.7139
+LPRNet,dekonwolucja,0,defocus_blur,8,40,1.0,0.15,0.4603,0.7604,0.9556,0.726
+LPRNet,dekonwolucja,0,defocus_blur,9,40,1.0,0.15,0.4638,0.7454,0.9443,0.7103
+LPRNet,dekonwolucja,0,defocus_blur,10,40,1.0,0.125,0.3759,0.7003,0.9409,0.6659
+LPRNet,dekonwolucja,1,none,0,40,1.0,0.975,0.9929,0.9766,0.979,0.8861
+LPRNet,dekonwolucja,1,motion_blur,1,40,1.0,0.925,0.983,0.9722,0.976,0.925
+LPRNet,dekonwolucja,1,motion_blur,2,40,1.0,0.925,0.9862,0.9682,0.9723,0.9177
+LPRNet,dekonwolucja,1,motion_blur,3,40,1.0,0.85,0.9705,0.9644,0.9748,0.9057
+LPRNet,dekonwolucja,1,motion_blur,4,40,1.0,0.8,0.9674,0.9628,0.975,0.9138
+LPRNet,dekonwolucja,1,motion_blur,5,40,1.0,0.8,0.9496,0.9618,0.9771,0.9004
+LPRNet,dekonwolucja,1,motion_blur,6,40,1.0,0.725,0.9375,0.9489,0.9718,0.8886
+LPRNet,dekonwolucja,1,motion_blur,7,40,1.0,0.6,0.8652,0.9197,0.9765,0.8345
+LPRNet,dekonwolucja,1,motion_blur,8,40,0.975,0.65,0.8402,0.9162,0.9719,0.8048
+LPRNet,dekonwolucja,1,motion_blur,9,40,1.0,0.55,0.8353,0.9097,0.982,0.8213
+LPRNet,dekonwolucja,1,motion_blur,10,40,1.0,0.5,0.7487,0.8699,0.9594,0.7803
+LPRNet,dekonwolucja,1,defocus_blur,1,40,1.0,0.925,0.9826,0.968,0.976,0.8691
+LPRNet,dekonwolucja,1,defocus_blur,2,40,1.0,0.775,0.9246,0.9318,0.9681,0.8066
+LPRNet,dekonwolucja,1,defocus_blur,3,40,1.0,0.775,0.8759,0.9119,0.9671,0.7218
+LPRNet,dekonwolucja,1,defocus_blur,4,40,1.0,0.675,0.7812,0.8762,0.9712,0.6789
+LPRNet,dekonwolucja,1,defocus_blur,5,40,1.0,0.375,0.5496,0.8194,0.9854,0.7198
+LPRNet,dekonwolucja,1,defocus_blur,6,40,1.0,0.375,0.6438,0.7984,0.9469,0.7093
+LPRNet,dekonwolucja,1,defocus_blur,7,40,1.0,0.25,0.5058,0.766,0.9576,0.7022
+LPRNet,dekonwolucja,1,defocus_blur,8,40,1.0,0.175,0.4518,0.7357,0.9461,0.691
+LPRNet,dekonwolucja,1,defocus_blur,9,40,1.0,0.175,0.4183,0.7301,0.8828,0.6977
+LPRNet,dekonwolucja,1,defocus_blur,10,40,1.0,0.15,0.3719,0.6631,0.856,0.629
+LPRNet,dekonwolucja,2,none,0,40,1.0,0.975,0.9929,0.9762,0.9808,0.7968
+LPRNet,dekonwolucja,2,motion_blur,1,40,1.0,0.925,0.9795,0.9723,0.9765,0.921
+LPRNet,dekonwolucja,2,motion_blur,2,40,1.0,0.875,0.9759,0.9677,0.9789,0.8889
+LPRNet,dekonwolucja,2,motion_blur,3,40,1.0,0.8,0.9598,0.9697,0.9786,0.9341
+LPRNet,dekonwolucja,2,motion_blur,4,40,1.0,0.8,0.9665,0.9644,0.97,0.942
+LPRNet,dekonwolucja,2,motion_blur,5,40,1.0,0.7,0.9388,0.9568,0.9713,0.9231
+LPRNet,dekonwolucja,2,motion_blur,6,40,1.0,0.55,0.8875,0.9362,0.9725,0.8919
+LPRNet,dekonwolucja,2,motion_blur,7,40,1.0,0.575,0.8344,0.9219,0.984,0.8378
+LPRNet,dekonwolucja,2,motion_blur,8,40,0.975,0.575,0.8062,0.9201,0.969,0.8497
+LPRNet,dekonwolucja,2,motion_blur,9,40,1.0,0.55,0.8228,0.9121,0.9789,0.8305
+LPRNet,dekonwolucja,2,motion_blur,10,40,1.0,0.425,0.7223,0.8736,0.9758,0.7981
+LPRNet,dekonwolucja,2,defocus_blur,1,40,1.0,0.925,0.9826,0.9699,0.9739,0.921
+LPRNet,dekonwolucja,2,defocus_blur,2,40,1.0,0.775,0.9138,0.931,0.9776,0.7705
+LPRNet,dekonwolucja,2,defocus_blur,3,40,1.0,0.725,0.85,0.914,0.9813,0.7368
+LPRNet,dekonwolucja,2,defocus_blur,4,40,1.0,0.675,0.829,0.8817,0.9636,0.7115
+LPRNet,dekonwolucja,2,defocus_blur,5,40,1.0,0.45,0.6237,0.8329,0.9724,0.7188
+LPRNet,dekonwolucja,2,defocus_blur,6,40,1.0,0.35,0.6161,0.8063,0.9544,0.7265
+LPRNet,dekonwolucja,2,defocus_blur,7,40,1.0,0.225,0.5464,0.7864,0.9798,0.7303
+LPRNet,dekonwolucja,2,defocus_blur,8,40,1.0,0.225,0.4554,0.7579,0.9067,0.7147
+LPRNet,dekonwolucja,2,defocus_blur,9,40,1.0,0.125,0.442,0.7346,0.9278,0.707
+LPRNet,dekonwolucja,2,defocus_blur,10,40,1.0,0.025,0.3411,0.6875,0.9337,0.6812
+CRNN,brak,0,none,0,40,1.0,0.975,0.9964,0.9887,0.99,0.938
+CRNN,brak,0,motion_blur,1,40,1.0,0.975,0.9929,0.9897,0.9921,0.8933
+CRNN,brak,0,motion_blur,2,40,1.0,0.95,0.9893,0.9919,0.9957,0.9188
+CRNN,brak,0,motion_blur,3,40,1.0,0.95,0.9893,0.9813,0.9892,0.83
+CRNN,brak,0,motion_blur,4,40,1.0,0.9,0.9786,0.9772,0.9858,0.9006
+CRNN,brak,0,motion_blur,5,40,1.0,0.85,0.9652,0.9652,0.9835,0.8612
+CRNN,brak,0,motion_blur,6,40,1.0,0.825,0.954,0.9592,0.9859,0.8334
+CRNN,brak,0,motion_blur,7,40,1.0,0.75,0.9277,0.9396,0.9772,0.8268
+CRNN,brak,0,motion_blur,8,40,0.975,0.65,0.8701,0.9173,0.9739,0.8041
+CRNN,brak,0,motion_blur,9,40,1.0,0.6,0.8688,0.9165,0.9729,0.8319
+CRNN,brak,0,motion_blur,10,40,1.0,0.5,0.8254,0.89,0.9812,0.7987
+CRNN,brak,0,defocus_blur,1,40,1.0,0.975,0.9929,0.9855,0.9871,0.9227
+CRNN,brak,0,defocus_blur,2,40,1.0,0.875,0.9612,0.9699,0.9887,0.8386
+CRNN,brak,0,defocus_blur,3,40,1.0,0.825,0.9438,0.9656,0.9907,0.8471
+CRNN,brak,0,defocus_blur,4,40,1.0,0.825,0.9299,0.9486,0.984,0.7819
+CRNN,brak,0,defocus_blur,5,40,1.0,0.7,0.8951,0.9187,0.9791,0.7779
+CRNN,brak,0,defocus_blur,6,40,1.0,0.625,0.821,0.8974,0.9717,0.7735
+CRNN,brak,0,defocus_blur,7,40,1.0,0.475,0.7719,0.8613,0.9777,0.7559
+CRNN,brak,0,defocus_blur,8,40,1.0,0.425,0.7103,0.8224,0.9795,0.7062
+CRNN,brak,0,defocus_blur,9,40,1.0,0.325,0.6513,0.7933,0.9455,0.7201
+CRNN,brak,0,defocus_blur,10,40,1.0,0.175,0.5688,0.7418,0.9684,0.6938
+CRNN,brak,1,none,0,40,1.0,1.0,1.0,0.992,0.992,
+CRNN,brak,1,motion_blur,1,40,1.0,0.975,0.9964,0.9899,0.9945,0.8088
+CRNN,brak,1,motion_blur,2,40,1.0,0.975,0.9929,0.9888,0.9922,0.8556
+CRNN,brak,1,motion_blur,3,40,1.0,0.95,0.9857,0.9804,0.9849,0.8948
+CRNN,brak,1,motion_blur,4,40,1.0,0.875,0.9714,0.9821,0.9922,0.9118
+CRNN,brak,1,motion_blur,5,40,1.0,0.925,0.975,0.9734,0.9854,0.8248
+CRNN,brak,1,motion_blur,6,40,1.0,0.875,0.9607,0.9593,0.987,0.7654
+CRNN,brak,1,motion_blur,7,40,1.0,0.725,0.9134,0.9518,0.9929,0.8436
+CRNN,brak,1,motion_blur,8,40,0.975,0.675,0.8531,0.93,0.9794,0.8188
+CRNN,brak,1,motion_blur,9,40,1.0,0.625,0.8808,0.9248,0.9793,0.8339
+CRNN,brak,1,motion_blur,10,40,1.0,0.625,0.8402,0.9017,0.9738,0.7816
+CRNN,brak,1,defocus_blur,1,40,1.0,0.975,0.9964,0.986,0.9889,0.8705
+CRNN,brak,1,defocus_blur,2,40,1.0,0.95,0.9821,0.9697,0.9805,0.765
+CRNN,brak,1,defocus_blur,3,40,1.0,0.85,0.9504,0.9603,0.9853,0.8183
+CRNN,brak,1,defocus_blur,4,40,1.0,0.825,0.9304,0.9481,0.9825,0.7857
+CRNN,brak,1,defocus_blur,5,40,1.0,0.75,0.9058,0.9357,0.988,0.7788
+CRNN,brak,1,defocus_blur,6,40,1.0,0.6,0.8384,0.906,0.9882,0.7829
+CRNN,brak,1,defocus_blur,7,40,1.0,0.55,0.783,0.8749,0.9732,0.7548
+CRNN,brak,1,defocus_blur,8,40,1.0,0.5,0.7446,0.8469,0.9642,0.7296
+CRNN,brak,1,defocus_blur,9,40,1.0,0.375,0.6866,0.8127,0.9504,0.73
+CRNN,brak,1,defocus_blur,10,40,1.0,0.175,0.6147,0.7843,0.9654,0.7458
+CRNN,brak,2,none,0,40,1.0,0.975,0.9964,0.9845,0.9851,0.9597
+CRNN,brak,2,motion_blur,1,40,1.0,0.975,0.9929,0.9865,0.9876,0.9409
+CRNN,brak,2,motion_blur,2,40,1.0,0.975,0.9929,0.9892,0.992,0.8769
+CRNN,brak,2,motion_blur,3,40,1.0,0.95,0.9893,0.9895,0.9918,0.9467
+CRNN,brak,2,motion_blur,4,40,1.0,0.95,0.9857,0.9771,0.983,0.8647
+CRNN,brak,2,motion_blur,5,40,1.0,0.9,0.9826,0.9728,0.9856,0.857
+CRNN,brak,2,motion_blur,6,40,1.0,0.875,0.9643,0.9627,0.9759,0.8704
+CRNN,brak,2,motion_blur,7,40,1.0,0.8,0.942,0.9415,0.976,0.8034
+CRNN,brak,2,motion_blur,8,40,0.975,0.675,0.8674,0.9066,0.9533,0.8016
+CRNN,brak,2,motion_blur,9,40,1.0,0.65,0.8826,0.9253,0.9774,0.8285
+CRNN,brak,2,motion_blur,10,40,1.0,0.525,0.8098,0.889,0.9637,0.8064
+CRNN,brak,2,defocus_blur,1,40,1.0,0.975,0.9964,0.9907,0.9927,0.9131
+CRNN,brak,2,defocus_blur,2,40,1.0,0.875,0.9759,0.9711,0.9898,0.8408
+CRNN,brak,2,defocus_blur,3,40,1.0,0.875,0.9621,0.9649,0.9872,0.8081
+CRNN,brak,2,defocus_blur,4,40,1.0,0.825,0.9308,0.9485,0.9823,0.7893
+CRNN,brak,2,defocus_blur,5,40,1.0,0.725,0.8857,0.9151,0.9775,0.7506
+CRNN,brak,2,defocus_blur,6,40,1.0,0.525,0.8071,0.8915,0.981,0.7926
+CRNN,brak,2,defocus_blur,7,40,1.0,0.55,0.7781,0.8607,0.9662,0.7319
+CRNN,brak,2,defocus_blur,8,40,1.0,0.45,0.7098,0.8361,0.975,0.7224
+CRNN,brak,2,defocus_blur,9,40,1.0,0.375,0.6692,0.8065,0.9406,0.7261
+CRNN,brak,2,defocus_blur,10,40,1.0,0.175,0.5723,0.7667,0.9663,0.7243
+CRNN,dekonwolucja,0,none,0,40,1.0,0.975,0.9964,0.9887,0.99,0.938
+CRNN,dekonwolucja,0,motion_blur,1,40,1.0,0.975,0.9929,0.9897,0.9921,0.8933
+CRNN,dekonwolucja,0,motion_blur,2,40,1.0,0.95,0.9893,0.9919,0.9957,0.9188
+CRNN,dekonwolucja,0,motion_blur,3,40,1.0,0.95,0.9893,0.9866,0.9892,0.9358
+CRNN,dekonwolucja,0,motion_blur,4,40,1.0,0.925,0.9821,0.9834,0.9893,0.9101
+CRNN,dekonwolucja,0,motion_blur,5,40,1.0,0.875,0.9754,0.9786,0.9864,0.9237
+CRNN,dekonwolucja,0,motion_blur,6,40,1.0,0.85,0.9683,0.9736,0.9863,0.9015
+CRNN,dekonwolucja,0,motion_blur,7,40,1.0,0.75,0.9482,0.9597,0.9811,0.8956
+CRNN,dekonwolucja,0,motion_blur,8,40,0.975,0.725,0.9156,0.9723,0.9871,0.9295
+CRNN,dekonwolucja,0,motion_blur,9,40,1.0,0.7,0.9152,0.9543,0.9773,0.9006
+CRNN,dekonwolucja,0,motion_blur,10,40,1.0,0.6,0.8906,0.9522,0.9834,0.9055
+CRNN,dekonwolucja,0,defocus_blur,1,40,1.0,0.975,0.9929,0.9855,0.9871,0.9227
+CRNN,dekonwolucja,0,defocus_blur,2,40,1.0,0.9,0.9643,0.9793,0.9927,0.8588
+CRNN,dekonwolucja,0,defocus_blur,3,40,1.0,0.825,0.9545,0.9694,0.9907,0.8692
+CRNN,dekonwolucja,0,defocus_blur,4,40,1.0,0.85,0.9299,0.9658,0.9838,0.8638
+CRNN,dekonwolucja,0,defocus_blur,5,40,1.0,0.7,0.8848,0.943,0.9851,0.8449
+CRNN,dekonwolucja,0,defocus_blur,6,40,1.0,0.625,0.8321,0.9174,0.9717,0.8271
+CRNN,dekonwolucja,0,defocus_blur,7,40,1.0,0.5,0.7732,0.8956,0.9785,0.8128
+CRNN,dekonwolucja,0,defocus_blur,8,40,1.0,0.45,0.7228,0.873,0.9751,0.7895
+CRNN,dekonwolucja,0,defocus_blur,9,40,1.0,0.325,0.671,0.8478,0.9455,0.8008
+CRNN,dekonwolucja,0,defocus_blur,10,40,1.0,0.25,0.6121,0.8337,0.9566,0.7927
+CRNN,dekonwolucja,1,none,0,40,1.0,1.0,1.0,0.992,0.992,
+CRNN,dekonwolucja,1,motion_blur,1,40,1.0,0.975,0.9893,0.9927,0.9945,0.9232
+CRNN,dekonwolucja,1,motion_blur,2,40,1.0,0.975,0.9929,0.9888,0.9922,0.8556
+CRNN,dekonwolucja,1,motion_blur,3,40,1.0,0.95,0.9929,0.9837,0.9848,0.9615
+CRNN,dekonwolucja,1,motion_blur,4,40,1.0,0.9,0.975,0.9859,0.9924,0.9272
+CRNN,dekonwolucja,1,motion_blur,5,40,1.0,0.95,0.9826,0.9879,0.991,0.9304
+CRNN,dekonwolucja,1,motion_blur,6,40,1.0,0.95,0.9821,0.9816,0.9878,0.8634
+CRNN,dekonwolucja,1,motion_blur,7,40,1.0,0.85,0.9612,0.9748,0.9863,0.91
+CRNN,dekonwolucja,1,motion_blur,8,40,0.975,0.775,0.9219,0.9775,0.9893,0.9316
+CRNN,dekonwolucja,1,motion_blur,9,40,1.0,0.675,0.9183,0.9625,0.9856,0.9144
+CRNN,dekonwolucja,1,motion_blur,10,40,1.0,0.725,0.9045,0.9581,0.9838,0.8902
+CRNN,dekonwolucja,1,defocus_blur,1,40,1.0,0.975,0.9964,0.986,0.9889,0.8705
+CRNN,dekonwolucja,1,defocus_blur,2,40,1.0,0.95,0.9821,0.9724,0.9833,0.765
+CRNN,dekonwolucja,1,defocus_blur,3,40,1.0,0.925,0.9607,0.974,0.9849,0.8397
+CRNN,dekonwolucja,1,defocus_blur,4,40,1.0,0.825,0.9375,0.9699,0.9856,0.896
+CRNN,dekonwolucja,1,defocus_blur,5,40,1.0,0.775,0.9165,0.954,0.9888,0.834
+CRNN,dekonwolucja,1,defocus_blur,6,40,1.0,0.625,0.8522,0.9397,0.9883,0.8588
+CRNN,dekonwolucja,1,defocus_blur,7,40,1.0,0.55,0.7795,0.9099,0.9732,0.8326
+CRNN,dekonwolucja,1,defocus_blur,8,40,1.0,0.525,0.7478,0.9004,0.978,0.8147
+CRNN,dekonwolucja,1,defocus_blur,9,40,1.0,0.35,0.6754,0.8785,0.9577,0.8359
+CRNN,dekonwolucja,1,defocus_blur,10,40,1.0,0.25,0.6304,0.8554,0.9659,0.8185
+CRNN,dekonwolucja,2,none,0,40,1.0,0.975,0.9964,0.9845,0.9851,0.9597
+CRNN,dekonwolucja,2,motion_blur,1,40,1.0,0.975,0.9929,0.9865,0.9876,0.9409
+CRNN,dekonwolucja,2,motion_blur,2,40,1.0,0.975,0.9929,0.9892,0.992,0.8769
+CRNN,dekonwolucja,2,motion_blur,3,40,1.0,0.95,0.9893,0.9895,0.9918,0.9467
+CRNN,dekonwolucja,2,motion_blur,4,40,1.0,0.95,0.9893,0.9838,0.9857,0.9476
+CRNN,dekonwolucja,2,motion_blur,5,40,1.0,0.925,0.9862,0.985,0.986,0.9731
+CRNN,dekonwolucja,2,motion_blur,6,40,1.0,0.925,0.9857,0.9831,0.9866,0.9397
+CRNN,dekonwolucja,2,motion_blur,7,40,1.0,0.85,0.9723,0.9728,0.9757,0.9563
+CRNN,dekonwolucja,2,motion_blur,8,40,0.975,0.675,0.9054,0.9587,0.9747,0.9229
+CRNN,dekonwolucja,2,motion_blur,9,40,1.0,0.7,0.9138,0.96,0.9789,0.9159
+CRNN,dekonwolucja,2,motion_blur,10,40,1.0,0.65,0.8946,0.952,0.9726,0.9137
+CRNN,dekonwolucja,2,defocus_blur,1,40,1.0,0.975,0.9964,0.9907,0.9927,0.9131
+CRNN,dekonwolucja,2,defocus_blur,2,40,1.0,0.9,0.9795,0.9781,0.99,0.8709
+CRNN,dekonwolucja,2,defocus_blur,3,40,1.0,0.9,0.9688,0.9776,0.9875,0.8884
+CRNN,dekonwolucja,2,defocus_blur,4,40,1.0,0.875,0.9647,0.9717,0.9798,0.915
+CRNN,dekonwolucja,2,defocus_blur,5,40,1.0,0.775,0.9089,0.9532,0.9816,0.8557
+CRNN,dekonwolucja,2,defocus_blur,6,40,1.0,0.55,0.8241,0.9227,0.9804,0.8523
+CRNN,dekonwolucja,2,defocus_blur,7,40,1.0,0.55,0.7781,0.9073,0.9662,0.8354
+CRNN,dekonwolucja,2,defocus_blur,8,40,1.0,0.45,0.7076,0.8867,0.975,0.8145
+CRNN,dekonwolucja,2,defocus_blur,9,40,1.0,0.4,0.6594,0.8556,0.9499,0.7928
+CRNN,dekonwolucja,2,defocus_blur,10,40,1.0,0.25,0.6147,0.8418,0.9627,0.8016
+PARSeq,brak,0,none,0,40,1.0,1.0,1.0,0.9978,0.9978,
+PARSeq,brak,0,motion_blur,1,40,1.0,0.975,0.9964,0.9809,0.9955,0.4134
+PARSeq,brak,0,motion_blur,2,40,1.0,0.975,0.9893,0.9833,0.9947,0.5404
+PARSeq,brak,0,motion_blur,3,40,1.0,0.925,0.9897,0.9666,0.992,0.6528
+PARSeq,brak,0,motion_blur,4,40,1.0,0.95,0.9897,0.941,0.9713,0.3652
+PARSeq,brak,0,motion_blur,5,40,1.0,0.975,0.9929,0.9596,0.9766,0.296
+PARSeq,brak,0,motion_blur,6,40,1.0,0.925,0.9786,0.9029,0.9504,0.3171
+PARSeq,brak,0,motion_blur,7,40,1.0,0.825,0.9585,0.8117,0.9259,0.2731
+PARSeq,brak,0,motion_blur,8,40,0.975,0.65,0.8701,0.7267,0.9085,0.3633
+PARSeq,brak,0,motion_blur,9,40,1.0,0.775,0.9308,0.7181,0.8402,0.2978
+PARSeq,brak,0,motion_blur,10,40,1.0,0.675,0.8531,0.6866,0.8815,0.282
+PARSeq,brak,0,defocus_blur,1,40,1.0,0.975,0.9929,0.9876,0.9988,0.5492
+PARSeq,brak,0,defocus_blur,2,40,1.0,0.975,0.9964,0.958,0.9814,0.0465
+PARSeq,brak,0,defocus_blur,3,40,1.0,0.925,0.9826,0.9287,0.9781,0.3205
+PARSeq,brak,0,defocus_blur,4,40,1.0,0.85,0.9692,0.8766,0.952,0.4496
+PARSeq,brak,0,defocus_blur,5,40,1.0,0.75,0.9049,0.7773,0.9751,0.1839
+PARSeq,brak,0,defocus_blur,6,40,1.0,0.7,0.8616,0.7002,0.9227,0.1811
+PARSeq,brak,0,defocus_blur,7,40,1.0,0.55,0.7652,0.5908,0.9101,0.2007
+PARSeq,brak,0,defocus_blur,8,40,1.0,0.475,0.7228,0.5237,0.904,0.1795
+PARSeq,brak,0,defocus_blur,9,40,1.0,0.4,0.6808,0.4272,0.8627,0.1369
+PARSeq,brak,0,defocus_blur,10,40,1.0,0.3,0.5991,0.3546,0.8089,0.16
+PARSeq,brak,1,none,0,40,1.0,1.0,1.0,0.9957,0.9957,
+PARSeq,brak,1,motion_blur,1,40,1.0,0.975,0.9964,0.9788,0.9929,0.4287
+PARSeq,brak,1,motion_blur,2,40,1.0,0.975,0.9893,0.9819,0.9957,0.4453
+PARSeq,brak,1,motion_blur,3,40,1.0,0.95,0.9929,0.9723,0.9862,0.7074
+PARSeq,brak,1,motion_blur,4,40,1.0,0.95,0.9897,0.9395,0.9704,0.3512
+PARSeq,brak,1,motion_blur,5,40,1.0,0.975,0.9929,0.9578,0.9762,0.2408
+PARSeq,brak,1,motion_blur,6,40,1.0,0.925,0.9857,0.8912,0.9485,0.1842
+PARSeq,brak,1,motion_blur,7,40,1.0,0.775,0.9482,0.8193,0.9404,0.4021
+PARSeq,brak,1,motion_blur,8,40,0.975,0.65,0.8839,0.7509,0.9257,0.4013
+PARSeq,brak,1,motion_blur,9,40,1.0,0.75,0.9192,0.7319,0.8781,0.2933
+PARSeq,brak,1,motion_blur,10,40,1.0,0.675,0.8554,0.6956,0.8958,0.2799
+PARSeq,brak,1,defocus_blur,1,40,1.0,0.975,0.9964,0.9833,0.9978,0.4184
+PARSeq,brak,1,defocus_blur,2,40,1.0,0.975,0.9893,0.9677,0.9835,0.3503
+PARSeq,brak,1,defocus_blur,3,40,1.0,0.95,0.9862,0.9322,0.9675,0.26
+PARSeq,brak,1,defocus_blur,4,40,1.0,0.85,0.9692,0.8881,0.9691,0.429
+PARSeq,brak,1,defocus_blur,5,40,1.0,0.775,0.908,0.7921,0.9574,0.2227
+PARSeq,brak,1,defocus_blur,6,40,1.0,0.7,0.8513,0.7322,0.9449,0.2359
+PARSeq,brak,1,defocus_blur,7,40,1.0,0.55,0.7844,0.6286,0.9471,0.2393
+PARSeq,brak,1,defocus_blur,8,40,1.0,0.475,0.7397,0.542,0.9336,0.1877
+PARSeq,brak,1,defocus_blur,9,40,1.0,0.375,0.6853,0.4458,0.9289,0.156
+PARSeq,brak,1,defocus_blur,10,40,1.0,0.325,0.6326,0.3737,0.7754,0.1803
+PARSeq,brak,2,none,0,40,1.0,1.0,1.0,0.9977,0.9977,
+PARSeq,brak,2,motion_blur,1,40,1.0,0.975,0.9964,0.9808,0.9951,0.4251
+PARSeq,brak,2,motion_blur,2,40,1.0,0.975,0.9964,0.9782,0.9964,0.269
+PARSeq,brak,2,motion_blur,3,40,1.0,0.975,0.9964,0.9616,0.9681,0.7051
+PARSeq,brak,2,motion_blur,4,40,1.0,0.95,0.9897,0.9378,0.9695,0.3359
+PARSeq,brak,2,motion_blur,5,40,1.0,0.975,0.9964,0.9535,0.9741,0.1501
+PARSeq,brak,2,motion_blur,6,40,1.0,0.925,0.9821,0.8835,0.9412,0.1723
+PARSeq,brak,2,motion_blur,7,40,1.0,0.825,0.9612,0.8243,0.9161,0.3915
+PARSeq,brak,2,motion_blur,8,40,0.975,0.725,0.8911,0.7369,0.8767,0.3314
+PARSeq,brak,2,motion_blur,9,40,1.0,0.75,0.9228,0.746,0.8621,0.3975
+PARSeq,brak,2,motion_blur,10,40,1.0,0.675,0.846,0.692,0.906,0.2476
+PARSeq,brak,2,defocus_blur,1,40,1.0,0.975,0.9929,0.9861,0.9985,0.5015
+PARSeq,brak,2,defocus_blur,2,40,1.0,0.975,0.9929,0.9637,0.9807,0.3031
+PARSeq,brak,2,defocus_blur,3,40,1.0,0.95,0.9862,0.9316,0.9682,0.2352
+PARSeq,brak,2,defocus_blur,4,40,1.0,0.875,0.9688,0.8769,0.9514,0.3558
+PARSeq,brak,2,defocus_blur,5,40,1.0,0.75,0.9121,0.7885,0.969,0.247
+PARSeq,brak,2,defocus_blur,6,40,1.0,0.675,0.8487,0.6955,0.9318,0.2048
+PARSeq,brak,2,defocus_blur,7,40,1.0,0.525,0.7612,0.5894,0.9332,0.2094
+PARSeq,brak,2,defocus_blur,8,40,1.0,0.5,0.7406,0.521,0.881,0.1611
+PARSeq,brak,2,defocus_blur,9,40,1.0,0.375,0.6893,0.4399,0.9105,0.1576
+PARSeq,brak,2,defocus_blur,10,40,1.0,0.275,0.6223,0.3712,0.8529,0.1885
+PARSeq,dekonwolucja,0,none,0,40,1.0,1.0,1.0,0.9978,0.9978,
+PARSeq,dekonwolucja,0,motion_blur,1,40,1.0,1.0,1.0,0.9969,0.9969,
+PARSeq,dekonwolucja,0,motion_blur,2,40,1.0,0.975,0.9964,0.9859,0.9947,0.6417
+PARSeq,dekonwolucja,0,motion_blur,3,40,1.0,0.975,0.9893,0.9874,0.992,0.8087
+PARSeq,dekonwolucja,0,motion_blur,4,40,1.0,0.95,0.9933,0.9872,0.9881,0.9702
+PARSeq,dekonwolucja,0,motion_blur,5,40,1.0,0.975,0.9969,0.9859,0.9856,0.9965
+PARSeq,dekonwolucja,0,motion_blur,6,40,1.0,0.95,0.9862,0.9748,0.9892,0.7002
+PARSeq,dekonwolucja,0,motion_blur,7,40,1.0,0.95,0.9933,0.9637,0.978,0.6921
+PARSeq,dekonwolucja,0,motion_blur,8,40,0.975,0.9,0.9464,0.9605,0.9832,0.6889
+PARSeq,dekonwolucja,0,motion_blur,9,40,1.0,0.875,0.983,0.9493,0.9795,0.7384
+PARSeq,dekonwolucja,0,motion_blur,10,40,1.0,0.75,0.9339,0.9009,0.9797,0.6643
+PARSeq,dekonwolucja,0,defocus_blur,1,40,1.0,0.975,0.9929,0.993,0.9988,0.7644
+PARSeq,dekonwolucja,0,defocus_blur,2,40,1.0,0.975,0.9821,0.9835,0.9901,0.7261
+PARSeq,dekonwolucja,0,defocus_blur,3,40,1.0,0.975,0.9786,0.9559,0.971,0.3653
+PARSeq,dekonwolucja,0,defocus_blur,4,40,1.0,0.9,0.983,0.9482,0.9833,0.6325
+PARSeq,dekonwolucja,0,defocus_blur,5,40,1.0,0.7,0.9022,0.825,0.9943,0.43
+PARSeq,dekonwolucja,0,defocus_blur,6,40,1.0,0.775,0.8911,0.7934,0.9366,0.3003
+PARSeq,dekonwolucja,0,defocus_blur,7,40,1.0,0.625,0.796,0.778,0.9677,0.4619
+PARSeq,dekonwolucja,0,defocus_blur,8,40,1.0,0.55,0.7451,0.6692,0.9285,0.3524
+PARSeq,dekonwolucja,0,defocus_blur,9,40,1.0,0.525,0.7567,0.63,0.9227,0.3064
+PARSeq,dekonwolucja,0,defocus_blur,10,40,1.0,0.4,0.692,0.5765,0.907,0.3561
+PARSeq,dekonwolucja,1,none,0,40,1.0,1.0,1.0,0.9957,0.9957,
+PARSeq,dekonwolucja,1,motion_blur,1,40,1.0,1.0,1.0,0.9955,0.9955,
+PARSeq,dekonwolucja,1,motion_blur,2,40,1.0,1.0,1.0,0.9893,0.9893,
+PARSeq,dekonwolucja,1,motion_blur,3,40,1.0,0.975,0.9964,0.9894,0.9932,0.8391
+PARSeq,dekonwolucja,1,motion_blur,4,40,1.0,0.95,0.9933,0.9896,0.9924,0.9374
+PARSeq,dekonwolucja,1,motion_blur,5,40,1.0,0.95,0.9933,0.9892,0.9937,0.9026
+PARSeq,dekonwolucja,1,motion_blur,6,40,1.0,0.95,0.9897,0.9765,0.9932,0.6594
+PARSeq,dekonwolucja,1,motion_blur,7,40,1.0,0.95,0.9719,0.9639,0.9795,0.6667
+PARSeq,dekonwolucja,1,motion_blur,8,40,0.975,0.9,0.9464,0.9603,0.9859,0.6528
+PARSeq,dekonwolucja,1,motion_blur,9,40,1.0,0.9,0.9866,0.9502,0.9784,0.6966
+PARSeq,dekonwolucja,1,motion_blur,10,40,1.0,0.775,0.9165,0.9106,0.9703,0.7052
+PARSeq,dekonwolucja,1,defocus_blur,1,40,1.0,0.975,0.9964,0.9833,0.9978,0.4184
+PARSeq,dekonwolucja,1,defocus_blur,2,40,1.0,0.975,0.9857,0.98,0.9915,0.5318
+PARSeq,dekonwolucja,1,defocus_blur,3,40,1.0,0.975,0.9786,0.952,0.97,0.2489
+PARSeq,dekonwolucja,1,defocus_blur,4,40,1.0,0.9,0.9688,0.9407,0.9885,0.5104
+PARSeq,dekonwolucja,1,defocus_blur,5,40,1.0,0.8,0.9009,0.8325,0.9518,0.3552
+PARSeq,dekonwolucja,1,defocus_blur,6,40,1.0,0.75,0.8683,0.8271,0.9573,0.4364
+PARSeq,dekonwolucja,1,defocus_blur,7,40,1.0,0.65,0.8241,0.8025,0.9538,0.5217
+PARSeq,dekonwolucja,1,defocus_blur,8,40,1.0,0.55,0.767,0.6651,0.9397,0.3295
+PARSeq,dekonwolucja,1,defocus_blur,9,40,1.0,0.525,0.7473,0.6627,0.9084,0.3912
+PARSeq,dekonwolucja,1,defocus_blur,10,40,1.0,0.375,0.6469,0.6139,0.9153,0.433
+PARSeq,dekonwolucja,2,none,0,40,1.0,1.0,1.0,0.9977,0.9977,
+PARSeq,dekonwolucja,2,motion_blur,1,40,1.0,1.0,1.0,0.996,0.996,
+PARSeq,dekonwolucja,2,motion_blur,2,40,1.0,0.975,0.9964,0.9897,0.9964,0.7286
+PARSeq,dekonwolucja,2,motion_blur,3,40,1.0,0.975,0.9964,0.9874,0.9947,0.7051
+PARSeq,dekonwolucja,2,motion_blur,4,40,1.0,0.95,0.9933,0.9877,0.9911,0.9238
+PARSeq,dekonwolucja,2,motion_blur,5,40,1.0,0.95,0.9933,0.9853,0.9917,0.8641
+PARSeq,dekonwolucja,2,motion_blur,6,40,1.0,0.95,0.9933,0.9718,0.9894,0.6392
+PARSeq,dekonwolucja,2,motion_blur,7,40,1.0,0.95,0.9897,0.9592,0.9757,0.6453
+PARSeq,dekonwolucja,2,motion_blur,8,40,0.975,0.9,0.9464,0.9597,0.978,0.7402
+PARSeq,dekonwolucja,2,motion_blur,9,40,1.0,0.875,0.9652,0.9453,0.9731,0.7508
+PARSeq,dekonwolucja,2,motion_blur,10,40,1.0,0.75,0.9272,0.9048,0.9808,0.6769
+PARSeq,dekonwolucja,2,defocus_blur,1,40,1.0,0.975,0.9929,0.9861,0.9985,0.5015
+PARSeq,dekonwolucja,2,defocus_blur,2,40,1.0,0.975,0.9821,0.9759,0.9902,0.419
+PARSeq,dekonwolucja,2,defocus_blur,3,40,1.0,0.975,0.9821,0.9538,0.9682,0.3905
+PARSeq,dekonwolucja,2,defocus_blur,4,40,1.0,0.9,0.983,0.9447,0.9857,0.5759
+PARSeq,dekonwolucja,2,defocus_blur,5,40,1.0,0.775,0.9121,0.8241,0.9733,0.3104
+PARSeq,dekonwolucja,2,defocus_blur,6,40,1.0,0.775,0.8817,0.8197,0.9422,0.398
+PARSeq,dekonwolucja,2,defocus_blur,7,40,1.0,0.625,0.8272,0.7773,0.9636,0.4667
+PARSeq,dekonwolucja,2,defocus_blur,8,40,1.0,0.55,0.7536,0.6688,0.9205,0.3611
+PARSeq,dekonwolucja,2,defocus_blur,9,40,1.0,0.55,0.7607,0.6408,0.9224,0.2965
+PARSeq,dekonwolucja,2,defocus_blur,10,40,1.0,0.325,0.6621,0.6032,0.97,0.4266
+PARSeq x2,dekonwolucja,0,none,0,40,1.0,1.0,1.0,0.9985,0.9985,
+PARSeq x2,dekonwolucja,0,motion_blur,1,40,1.0,1.0,1.0,0.9977,0.9977,
+PARSeq x2,dekonwolucja,0,motion_blur,2,40,1.0,0.975,0.9964,0.9906,0.9954,0.8043
+PARSeq x2,dekonwolucja,0,motion_blur,3,40,1.0,0.975,0.9893,0.9912,0.9944,0.8651
+PARSeq x2,dekonwolucja,0,motion_blur,4,40,1.0,0.95,0.9933,0.99,0.991,0.9702
+PARSeq x2,dekonwolucja,0,motion_blur,5,40,1.0,0.975,0.9969,0.988,0.9878,0.9973
+PARSeq x2,dekonwolucja,0,motion_blur,6,40,1.0,0.95,0.9933,0.9832,0.9937,0.7843
+PARSeq x2,dekonwolucja,0,motion_blur,7,40,1.0,0.95,0.9719,0.971,0.9841,0.7227
+PARSeq x2,dekonwolucja,0,motion_blur,8,40,0.975,0.9,0.9464,0.9698,0.988,0.7522
+PARSeq x2,dekonwolucja,0,motion_blur,9,40,1.0,0.925,0.9719,0.9617,0.982,0.7111
+PARSeq x2,dekonwolucja,0,motion_blur,10,40,1.0,0.75,0.9125,0.9221,0.9866,0.7288
+PARSeq x2,dekonwolucja,0,defocus_blur,1,40,1.0,0.975,0.9929,0.993,0.9989,0.7644
+PARSeq x2,dekonwolucja,0,defocus_blur,2,40,1.0,0.95,0.9862,0.985,0.9921,0.851
+PARSeq x2,dekonwolucja,0,defocus_blur,3,40,1.0,0.95,0.9754,0.9661,0.9809,0.6858
+PARSeq x2,dekonwolucja,0,defocus_blur,4,40,1.0,0.9,0.9723,0.9576,0.988,0.6834
+PARSeq x2,dekonwolucja,0,defocus_blur,5,40,1.0,0.75,0.8915,0.8631,0.9739,0.5309
+PARSeq x2,dekonwolucja,0,defocus_blur,6,40,1.0,0.8,0.8929,0.8497,0.9539,0.4328
+PARSeq x2,dekonwolucja,0,defocus_blur,7,40,1.0,0.625,0.8076,0.8142,0.9786,0.5402
+PARSeq x2,dekonwolucja,0,defocus_blur,8,40,1.0,0.625,0.792,0.7659,0.9601,0.4423
+PARSeq x2,dekonwolucja,0,defocus_blur,9,40,1.0,0.575,0.7714,0.7328,0.9482,0.4414
+PARSeq x2,dekonwolucja,0,defocus_blur,10,40,1.0,0.425,0.6826,0.6838,0.9558,0.4828
+PARSeq x2,dekonwolucja,1,none,0,40,1.0,1.0,1.0,0.998,0.998,
+PARSeq x2,dekonwolucja,1,motion_blur,1,40,1.0,1.0,1.0,0.9965,0.9965,
+PARSeq x2,dekonwolucja,1,motion_blur,2,40,1.0,1.0,1.0,0.9898,0.9898,
+PARSeq x2,dekonwolucja,1,motion_blur,3,40,1.0,0.975,0.9964,0.9926,0.9958,0.8704
+PARSeq x2,dekonwolucja,1,motion_blur,4,40,1.0,0.95,0.9933,0.9908,0.9933,0.9432
+PARSeq x2,dekonwolucja,1,motion_blur,5,40,1.0,0.95,0.9933,0.9903,0.9949,0.9026
+PARSeq x2,dekonwolucja,1,motion_blur,6,40,1.0,0.95,0.9719,0.9861,0.9942,0.8317
+PARSeq x2,dekonwolucja,1,motion_blur,7,40,1.0,0.925,0.9531,0.9825,0.9924,0.8601
+PARSeq x2,dekonwolucja,1,motion_blur,8,40,0.975,0.9,0.9429,0.9774,0.9907,0.818
+PARSeq x2,dekonwolucja,1,motion_blur,9,40,1.0,0.9,0.9397,0.9758,0.9872,0.8731
+PARSeq x2,dekonwolucja,1,motion_blur,10,40,1.0,0.775,0.8857,0.9488,0.9836,0.8288
+PARSeq x2,dekonwolucja,1,defocus_blur,1,40,1.0,1.0,1.0,0.988,0.988,
+PARSeq x2,dekonwolucja,1,defocus_blur,2,40,1.0,0.975,0.9929,0.9846,0.9919,0.6984
+PARSeq x2,dekonwolucja,1,defocus_blur,3,40,1.0,0.95,0.983,0.9727,0.9821,0.794
+PARSeq x2,dekonwolucja,1,defocus_blur,4,40,1.0,0.9,0.9438,0.9601,0.9926,0.6667
+PARSeq x2,dekonwolucja,1,defocus_blur,5,40,1.0,0.75,0.8978,0.8622,0.9921,0.4724
+PARSeq x2,dekonwolucja,1,defocus_blur,6,40,1.0,0.775,0.879,0.8912,0.9832,0.5741
+PARSeq x2,dekonwolucja,1,defocus_blur,7,40,1.0,0.625,0.8143,0.8511,0.9839,0.6298
+PARSeq x2,dekonwolucja,1,defocus_blur,8,40,1.0,0.6,0.7504,0.8239,0.9618,0.6169
+PARSeq x2,dekonwolucja,1,defocus_blur,9,40,1.0,0.575,0.7835,0.7719,0.9565,0.5221
+PARSeq x2,dekonwolucja,1,defocus_blur,10,40,1.0,0.425,0.6817,0.77,0.9587,0.6306
+PARSeq x2,dekonwolucja,2,none,0,40,1.0,1.0,1.0,0.9981,0.9981,
+PARSeq x2,dekonwolucja,2,motion_blur,1,40,1.0,1.0,1.0,0.9965,0.9965,
+PARSeq x2,dekonwolucja,2,motion_blur,2,40,1.0,0.975,0.9964,0.9938,0.9967,0.8803
+PARSeq x2,dekonwolucja,2,motion_blur,3,40,1.0,0.975,0.9964,0.9932,0.9962,0.8764
+PARSeq x2,dekonwolucja,2,motion_blur,4,40,1.0,0.95,0.9933,0.9896,0.9923,0.939
+PARSeq x2,dekonwolucja,2,motion_blur,5,40,1.0,0.95,0.9933,0.9868,0.9932,0.8648
+PARSeq x2,dekonwolucja,2,motion_blur,6,40,1.0,0.95,0.9933,0.978,0.9923,0.7078
+PARSeq x2,dekonwolucja,2,motion_blur,7,40,1.0,0.925,0.9531,0.9741,0.9893,0.787
+PARSeq x2,dekonwolucja,2,motion_blur,8,40,0.975,0.9,0.9464,0.9715,0.989,0.7614
+PARSeq x2,dekonwolucja,2,motion_blur,9,40,1.0,0.925,0.9647,0.9572,0.9773,0.7103
+PARSeq x2,dekonwolucja,2,motion_blur,10,40,1.0,0.775,0.925,0.9353,0.9791,0.7847
+PARSeq x2,dekonwolucja,2,defocus_blur,1,40,1.0,0.975,0.9929,0.9861,0.9986,0.5015
+PARSeq x2,dekonwolucja,2,defocus_blur,2,40,1.0,0.925,0.9835,0.9815,0.9955,0.8091
+PARSeq x2,dekonwolucja,2,defocus_blur,3,40,1.0,0.925,0.9799,0.9683,0.9886,0.718
+PARSeq x2,dekonwolucja,2,defocus_blur,4,40,1.0,0.9,0.9866,0.9497,0.9877,0.6077
+PARSeq x2,dekonwolucja,2,defocus_blur,5,40,1.0,0.775,0.8857,0.8591,0.9747,0.4612
+PARSeq x2,dekonwolucja,2,defocus_blur,6,40,1.0,0.8,0.8603,0.8619,0.9648,0.4504
+PARSeq x2,dekonwolucja,2,defocus_blur,7,40,1.0,0.625,0.821,0.8202,0.9818,0.5509
+PARSeq x2,dekonwolucja,2,defocus_blur,8,40,1.0,0.625,0.7955,0.7714,0.9566,0.4628
+PARSeq x2,dekonwolucja,2,defocus_blur,9,40,1.0,0.6,0.7763,0.7184,0.944,0.3801
+PARSeq x2,dekonwolucja,2,defocus_blur,10,40,1.0,0.375,0.6879,0.6889,0.9623,0.5248

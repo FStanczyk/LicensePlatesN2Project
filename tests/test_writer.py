@@ -139,3 +139,23 @@ def test_add_crop_niski_wycinek(tmp_path):
     for i in range(20):
         writer.add_crop(f"k{i}", "test", photo(18, 70), dict(FIELDS_PLATE))
     assert len(writer.rows) == 40
+
+
+@pytest.mark.parametrize("name", ["motion_blur", "defocus_blur"])
+def test_apply_blur_parzyste_poziomy_jak_biblioteka(name):
+    pytest.importorskip("imagecorruptions", reason='wymaga extras [build]: pip install -e ".[build]"')
+    from alpr.build.corruptions import apply_blur, apply_corruption
+
+    img = np.random.default_rng(0).integers(0, 256, (40, 90, 3), dtype=np.uint8)
+    for k in range(1, 6):
+        assert np.array_equal(apply_blur(img, name, 2 * k, "a"), apply_corruption(img, name, k, "a"))
+    diffs = [np.abs(apply_blur(img, name, lvl, "a").astype(float) - img).mean() for lvl in range(1, 11)]
+    assert diffs == sorted(diffs)
+
+
+def test_apply_blur_maly_obraz_zachowuje_ksztalt():
+    pytest.importorskip("imagecorruptions", reason='wymaga extras [build]: pip install -e ".[build]"')
+    from alpr.build.corruptions import apply_blur
+
+    img = np.full((10, 20, 3), 128, np.uint8)
+    assert apply_blur(img, "defocus_blur", 3, "a").shape == img.shape
