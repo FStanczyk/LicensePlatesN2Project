@@ -164,6 +164,30 @@ Odczyt bezbłędny, wybrane poziomy (2k = siła k z `imagecorruptions`):
 * CAR spada łagodniej niż odczyt bezbłędny (PARSeq, ostrość 10: CAR 0.599, odczyt bezbłędny 0.300), więc jest co
   odzyskiwać poprawą obrazu.
 
+**21.11.2026 (Golba), pełny eksperyment**: te same 10 poziomów i 5 silników z poprawą odczytu Włodarczyka
+(dekonwolucja `--deblur`; dla PARSeq także drugi model po dekonwolucji). Pełne tabele:
+`results/experiment/blur10/PODSUMOWANIE_POPRAWA.md`. Odczyt bezbłędny, średnio na poziomach 1-10, bez / z poprawą:
+
+| Silnik | Rozmycie ruchu | Rozmycie ostrości |
+|---|---|---|
+| EasyOCR strojony | 0.085 / 0.258 | 0.122 / 0.125 |
+| Tesseract (Otsu) | 0.042 / 0.028 | 0.065 / 0.050 |
+| LPRNet | 0.418 / 0.678 | 0.420 / 0.465 |
+| CRNN | 0.795 / 0.830 | 0.622 / 0.640 |
+| PARSeq | 0.865 / 0.930 | 0.690 / 0.740 |
+| PARSeq + drugi model po dekonwolucji | 0.865 / 0.935 | 0.690 / 0.757 |
+
+* Dekonwolucja odzyskuje głównie rozmycie ruchu (LPRNet na poziomach 7-10 z 0-5% do 50-53%); przy rozmyciu
+  ostrości od poziomu 7 najlepszy układ zostaje poniżej 65%.
+* Tesseract na tym traci: z listą znaków zgłasza pewność 0, więc wybór widoku po pewności nie działa.
+
+**21.11.2026 (Golba), podsumowanie końcowe**: `results/experiment/blur10/PODSUMOWANIE_FINAL.md` (zbiór, detekcja,
+silniki OCR i ich trening, 10 poziomów rozmycia, wyniki dla 3 ziaren treningu sieci z pewnością odczytu, wnioski i
+TODO), liczby w `tabela_final.csv`. Średnio po 3 ziarnach, bez / z poprawą: LPRNet 0.421 / 0.696 (ruch) i
+0.416 / 0.460 (ostrość), CRNN 0.815 / 0.853 i 0.637 / 0.659, PARSeq 0.867 / 0.931 i 0.691 / 0.743, PARSeq x2
+0.933 i 0.756. Rozrzut między ziarnami do 5.6 p.p. w średniej. Sieci są uczone na naszych danych i tym samym
+generatorze rozmycia, więc wynik to górna granica dla tego układu.
+
 ---
 
 ## Możliwe eksperymenty

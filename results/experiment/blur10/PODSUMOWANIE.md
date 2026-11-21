@@ -1,6 +1,7 @@
 # Duży eksperyment: 10 poziomów rozmycia, 5 silników OCR
 
 Przebieg z 21.11.2026 (Golba, RTX 4080). Bez poprawy zniekształconych zdjęć (bez dekonwolucji).
+Te same zdjęcia z poprawą odczytu (dekonwolucja Włodarczyka): `PODSUMOWANIE_POPRAWA.md`.
 
 ## Konfiguracja
 
@@ -103,7 +104,7 @@ Ostrość: (promień dysku, alias) `(2, 0.1) (3, 0.1) (3.5, 0.3) (4, 0.5) (5, 0.
 * Rozmycie ostrości jest trudniejsze niż ruch na tych samych poziomach: PARSeq na poziomie 10 ma 0.300 przy ostrości
   i 0.675 przy ruchu. Dysk o promieniu 8-10 px wymazuje kreski znaków, ruch zostawia je czytelne wzdłuż jednej osi.
 * CAR spada dużo łagodniej niż odczyt bezbłędny: PARSeq przy ostrości 10 myli średnio 40% znaków, a całą tablicę
-  odczytuje dobrze w 30% przypadków. Tu jest miejsce na poprawę obrazu (następny krok).
+  odczytuje dobrze w 30% przypadków. Tu jest miejsce na poprawę obrazu (`PODSUMOWANIE_POPRAWA.md`).
 
 ## Zastrzeżenia
 

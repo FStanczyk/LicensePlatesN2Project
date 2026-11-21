@@ -213,5 +213,67 @@ Detekcja: 97.5-100% na każdym poziomie. Najtrudniejsze: rozmycie ostrości od p
 
 ### Stan na koniec dnia
 * [x] 10 poziomów rozmycia z testami, zbiór `data/experiment_blur10`, 5 silników policzonych
-* [ ] poprawa rozmytych zdjęć (dekonwolucja Włodarczyka, unsharp masking) na tej samej skali
+* [x] poprawa odczytu rozmytych zdjęć (dekonwolucja Włodarczyka) na tej samej skali, niżej
 * [ ] przepisanie tabeli bloków w README
+
+## 21.11.2026: pełny eksperyment, poprawa odczytu na 10 poziomach rozmycia
+
+### Przebieg
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Metody | dekonwolucja (`run_experiment.py --deblur`) dla wszystkich 5 silników; dla PARSeq także pełny układ z `parseq_dec_s0` (`--ocr-weights` z dwoma wagami) | to, co Włodarczyk wdrożył w `alpr/deblur.py` i `alpr/ocr.py`; metody odrzucone przez niego (CLAHE, Wiener, U-Net) nie są w potoku |
+| Zbiór, detektor, wycinki | jak w przebiegu bez poprawy (`data/experiment_blur10`, `plates_ref`) | porównanie tylko skutku poprawy |
+| Wyniki | `results/experiment/blur10_deblur_<silnik>/`, zestawienie w `results/experiment/blur10/tabela_pelna.csv` i `PODSUMOWANIE_POPRAWA.md` | |
+
+### Wynik
+Odczyt bezbłędny, średnio na poziomach 1-10, bez / z poprawą:
+
+| Silnik | Ruch | Ostrość |
+|---|---|---|
+| EasyOCR | 0.085 / 0.258 | 0.122 / 0.125 |
+| Tesseract | 0.042 / 0.028 | 0.065 / 0.050 |
+| LPRNet | 0.418 / 0.678 | 0.420 / 0.465 |
+| CRNN | 0.795 / 0.830 | 0.622 / 0.640 |
+| PARSeq | 0.865 / 0.930 | 0.690 / 0.740 |
+| PARSeq x2 | 0.865 / 0.935 | 0.690 / 0.757 |
+
+Dekonwolucja działa dobrze na ruch (kąt z widma), słabo na silną ostrość. Tesseract traci, bo z `whitelist`
+zgłasza pewność 0 w 92% odczytów i wybór widoku po pewności przepuszcza widoki po dekonwolucji.
+
+### Do zrobienia (moja część)
+* Tesseract: inna miara pewności przy dekonwolucji (np. odczyt bez `whitelist`),
+* poprawa dla silnego rozmycia ostrości (poziomy 7-10), np. unsharp masking albo model uczony na tych poziomach,
+* przepisanie tabeli bloków w README.
+
+## 21.11.2026: podsumowanie końcowe, 3 ziarna
+
+### Przebieg
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Ziarna | LPRNet, CRNN, `parseq_s<n>` i `parseq_dec_s<n>` uczone dla `--seed 1` i `2` (`runs/ocr/<model>_s1`, `_s2`), przepisy jak dla ziarna 0 | przepis z README; EasyOCR i Tesseract nic nie losują, więc mają jeden przebieg; detektor `plates_ref` wspólny |
+| Przebiegi | 14 nowych (`results/experiment/blur10_[deblur_]<silnik>_s1`, `_s2`), ziarno 0 z poprzednich przebiegów | ten sam zbiór `data/experiment_blur10` |
+| Pewność | średnia, osobno dla trafnych i błędnych, AUROC i odsetek zer | wszystkie silniki w `alpr.ocr` zwracają pewność; pytanie, kiedy wołać dekonwolucję |
+| Wynik | `results/experiment/blur10/PODSUMOWANIE_FINAL.md`, `tabela_final.csv` | |
+| `train_ocr.py` na Windows | proces kończy się kodem 127 po zapisaniu wag CRNN | wagi i historia są kompletne; w skrypcie łańcuchowym bez `set -e` |
+
+### Wynik
+Walidacja OCR, ziarna 0 / 1 / 2: CRNN 0.943 / 0.956 / 0.946, LPRNet 0.895 / 0.888 / 0.888, PARSeq 0.972 / 0.973 / 0.972,
+PARSeq po dekonwolucji 0.955 / 0.952 / 0.954.
+
+Odczyt bezbłędny, średnio po poziomach 1-10 i 3 ziarnach, bez / z poprawą:
+
+| Silnik | Ruch | Ostrość |
+|---|---|---|
+| LPRNet | 0.421 / 0.696 | 0.416 / 0.460 |
+| CRNN | 0.815 / 0.853 | 0.637 / 0.659 |
+| PARSeq | 0.867 / 0.931 | 0.691 / 0.743 |
+| PARSeq x2 | - / 0.933 | - / 0.756 |
+
+Pewność: PARSeq, CRNN, LPRNet i EasyOCR rozdzielają trafne i błędne odczyty (AUROC 0.97-0.99), Tesseract nie
+(0.45, z dekonwolucją 0.27). Tesseract nie był uczony na naszych danych, więc spadek z dekonwolucją to skutek miary
+pewności, a nie przeuczenia. Wysoki wynik PARSeq x2 dotyczy naszych danych i rozmycia z `imagecorruptions`.
+
+### Do zrobienia (moja część)
+* reguła „dekonwolucja tylko przy pewności < próg” (PARSeq: pewność >= 0.9 ma 70% odczytów, z nich 99.6% trafnych),
+  próg dobrany na `experiment_val`,
+* sprawdzenie na prawdziwym rozmyciu i tablicach spoza data1.
