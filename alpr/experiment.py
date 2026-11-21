@@ -24,6 +24,8 @@ from alpr.geometry import box_iou_matrix
 SPLITS = ("test",)
 CORRUPTIONS = ("brightness", "darken", "motion_blur", "defocus_blur")
 SEVERITIES = (1, 2, 3, 4, 5)
+BLURS = ("motion_blur", "defocus_blur")
+BLUR_SEVERITIES = tuple(range(1, 11))
 GT_FIELDS = [
     "variant",
     "artificial_corruption",
@@ -58,9 +60,16 @@ RESULT_FIELDS = [
 ]
 
 
-def variants(corruptions: tuple[str, ...] = CORRUPTIONS) -> list[tuple[str, str, int]]:
-    """(nazwa katalogu, zniekształcenie, siła); pierwsza zawsze clean."""
-    return [("clean", "none", 0)] + [(f"{c}_{s}", c, s) for c in corruptions for s in SEVERITIES]
+def variants(corruptions: tuple[str, ...] = CORRUPTIONS, levels: int = 5) -> list[tuple[str, str, int]]:
+    """(nazwa katalogu, zniekształcenie, siła); pierwsza zawsze clean.
+
+    levels 10: tylko rozmycia (BLURS) w poziomach 1-10 (alpr.build.corruptions.BLUR_LEVELS), katalogi <rozmycie>_01..10.
+    """
+    if levels == 5:
+        return [("clean", "none", 0)] + [(f"{c}_{s}", c, s) for c in corruptions for s in SEVERITIES]
+    if levels != 10 or not set(corruptions) <= set(BLURS):
+        raise ValueError(f"10 poziomów jest tylko dla {BLURS}")
+    return [("clean", "none", 0)] + [(f"{c}_{s:02d}", c, s) for c in corruptions for s in BLUR_SEVERITIES]
 
 
 def ground_truth(dataset: Path, splits: tuple[str, ...] = SPLITS) -> pd.DataFrame:
@@ -75,19 +84,25 @@ def images_by_source(gt: pd.DataFrame) -> list[str]:
 
 
 def build_image(
-    item: tuple[str, list[dict]], dataset: Path, out: Path, corruptions: tuple[str, ...] = CORRUPTIONS
+    item: tuple[str, list[dict]],
+    dataset: Path,
+    out: Path,
+    corruptions: tuple[str, ...] = CORRUPTIONS,
+    levels: int = 5,
 ) -> list[dict]:
     """Wszystkie wersje jednego zdjęcia zapisane w out/images; wiersze ground truth dla nich."""
-    from alpr.build.corruptions import apply_corruption
+    from alpr.build.corruptions import apply_blur, apply_corruption
+
+    corrupt = apply_corruption if levels == 5 else apply_blur
 
     image, plates = item
     name = PurePosixPath(image).name
     img = cv2.imread(str(dataset / image))
     rows = []
-    for variant, corruption, severity in variants(corruptions):
+    for variant, corruption, severity in variants(corruptions, levels):
         rel = f"images/{variant}/{name}"
         (out / rel).parent.mkdir(parents=True, exist_ok=True)
-        version = img if severity == 0 else apply_corruption(img, corruption, severity, f"{name}:{variant}")
+        version = img if severity == 0 else corrupt(img, corruption, severity, f"{name}:{variant}")
         cv2.imwrite(str(out / rel), version, [cv2.IMWRITE_JPEG_QUALITY, 95])
         rows += [
             {
@@ -109,6 +124,7 @@ def build_experiment(
     splits: tuple[str, ...] = SPLITS,
     corruptions: tuple[str, ...] = CORRUPTIONS,
     workers: int = 1,
+    levels: int = 5,
 ) -> pd.DataFrame:
     """Zapisuje wersje zdjęć w out/images i zwraca ground truth dla wszystkich wersji.
 
@@ -116,7 +132,8 @@ def build_experiment(
     """
     gt = ground_truth(dataset, splits)
     items = [(image, plates.to_dict("records")) for image, plates in gt.groupby("image")]
-    build = partial(build_image, dataset=dataset, out=out, corruptions=corruptions)
+    variants(corruptions, levels)
+    build = partial(build_image, dataset=dataset, out=out, corruptions=corruptions, levels=levels)
     rows = []
     with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context(MP_START)) as pool:
         for i, part in enumerate(pool.map(build, items) if workers > 1 else map(build, items), 1):

@@ -5,6 +5,7 @@ Użycie:
     python3 scripts/build_experiment.py                         # test, 4 zniekształcenia x siła 1-5
     python3 scripts/build_experiment.py --splits val test --corruptions darken brightness
     python3 scripts/build_experiment.py --force                 # zbuduj od nowa
+    python3 scripts/build_experiment.py --levels 10 --out data/experiment_blur10   # rozmycia w poziomach 1-10
 
 Wymaga pip install -e ".[build]" (imagecorruptions). Bierze tylko oryginalne całe zdjęcia z czytelnym
 tekstem (bez blurred, czyli bez UC3M-LP), domyślnie tylko z test (val wybiera best.pt przy treningu YOLO).
@@ -24,7 +25,7 @@ from pathlib import Path
 
 from alpr.config import EXPERIMENT, default_dataset
 from alpr.dataset import SPLITS
-from alpr.experiment import CORRUPTIONS, build_experiment
+from alpr.experiment import BLURS, CORRUPTIONS, build_experiment
 from alpr.experiment import SPLITS as EXPERIMENT_SPLITS
 
 
@@ -32,18 +33,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", type=Path, default=default_dataset(), help="katalog zbioru")
     parser.add_argument("--splits", nargs="+", default=list(EXPERIMENT_SPLITS), choices=SPLITS)
-    parser.add_argument("--corruptions", nargs="+", default=list(CORRUPTIONS))
+    parser.add_argument("--corruptions", nargs="+", help=f"domyślnie {CORRUPTIONS}, z --levels 10: {BLURS}")
+    parser.add_argument("--levels", type=int, default=5, choices=[5, 10], help="10: tylko rozmycia, poziomy 1-10")
     parser.add_argument("--out", type=Path, default=EXPERIMENT)
     parser.add_argument("--workers", type=int, default=os.cpu_count(), help="procesy (wynik nie zależy od liczby)")
     parser.add_argument("--force", action="store_true", help="usuń istniejący zbiór i zbuduj od nowa")
     args = parser.parse_args()
 
+    corruptions = tuple(args.corruptions or (BLURS if args.levels == 10 else CORRUPTIONS))
     gt_path = args.out / "ground_truth.csv"
     if gt_path.exists() and not args.force:
         print(f"Zbiór już jest: {gt_path} (--force, aby zbudować od nowa)")
         return 0
     shutil.rmtree(args.out, ignore_errors=True)
-    gt = build_experiment(args.dataset.resolve(), args.out, tuple(args.splits), tuple(args.corruptions), args.workers)
+    gt = build_experiment(args.dataset.resolve(), args.out, tuple(args.splits), corruptions, args.workers, args.levels)
     gt.to_csv(gt_path, index=False)
 
     clean = gt[gt.variant == "clean"]

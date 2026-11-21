@@ -183,5 +183,35 @@ PARSeq zgodny z przebiegiem Włodarczyka (ziarno 0: 0.916). Zostaje rozmycie ost
 * [x] `get_models.py` z testami, instrukcja w README
 * [x] `MP_START` z testem, równoległa budowa i `--deblur` działają na Windows
 * [ ] nowa wersja zbioru na Kaggle (Stańczyk)
-* [ ] 10 poziomów rozmycia bez `brightness` i `darken` (punkt 1 "Kolejnych kroków")
+* [x] 10 poziomów rozmycia bez `brightness` i `darken` (punkt 1 "Kolejnych kroków"), niżej
+* [ ] przepisanie tabeli bloków w README
+
+## 21.11.2026: duży eksperyment, 10 poziomów rozmycia i 5 silników OCR
+
+### Przebieg
+| Kwestia | Decyzja | Powód |
+|---|---|---|
+| Poziomy (`alpr.build.corruptions.BLUR_LEVELS`, `apply_blur`) | poziom 2k = siła k z `imagecorruptions` (bit w bit, test), nieparzyste to średnia parametrów sąsiednich sił, poziom 1 słabszy od siły 1 | zgodność ze starymi wynikami na poziomach parzystych, gęstsza skala |
+| Zbiór (`build_experiment.py --levels 10 --out data/experiment_blur10`) | 40 tablic `test` x (clean + 2 rozmycia x 10 poziomów) | decyzja z 15.11: `brightness` i `darken` pominięte |
+| Silniki | EasyOCR strojony, Tesseract 5.4 z Otsu, LPRNet, CRNN, PARSeq (`parseq_s0`) | wszystkie silniki z `alpr.ocr`; bez dekonwolucji, bo poprawa obrazu to następny krok |
+| Tesseract | zainstalowany przez `winget` (UB Mannheim), dopisany do `PATH` przy uruchomieniu | `pytesseract` woła program `tesseract` |
+| LPRNet | `train_ocr.py --model lprnet --epochs 100 --lr 3e-3` (val plate_acc 0.895) | brak wag lokalnie; przepis z docstringu, bez rozmycia w augmentacji |
+| Wycinek | EasyOCR i Tesseract z `PlateAligner`, sieci z samej ramki (`--no-align`) | najlepsze ustawienie każdego silnika z pomiarów Włodarczyka |
+
+### Wynik
+Odczyt bezbłędny, średnio na poziomach 1-10 (pełne tabele: `results/experiment/blur10/PODSUMOWANIE.md`, `tabela.csv`):
+
+| Silnik | Czyste | Ruch | Ostrość |
+|---|---|---|---|
+| EasyOCR | 0.625 | 0.085 | 0.123 |
+| Tesseract | 0.375 | 0.042 | 0.065 |
+| LPRNet | 0.975 | 0.418 | 0.420 |
+| CRNN | 0.975 | 0.795 | 0.622 |
+| PARSeq | 1.000 | 0.865 | 0.690 |
+
+Detekcja: 97.5-100% na każdym poziomie. Najtrudniejsze: rozmycie ostrości od poziomu 7 (PARSeq 0.550 -> 0.300).
+
+### Stan na koniec dnia
+* [x] 10 poziomów rozmycia z testami, zbiór `data/experiment_blur10`, 5 silników policzonych
+* [ ] poprawa rozmytych zdjęć (dekonwolucja Włodarczyka, unsharp masking) na tej samej skali
 * [ ] przepisanie tabeli bloków w README
